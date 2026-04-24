@@ -71,7 +71,7 @@
   }
   #dots {
     position: fixed;
-    bottom: max(24px, env(safe-area-inset-bottom, 24px));
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -118,6 +118,192 @@
     display: flex; align-items: center; justify-content: center;
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* ── Toolbar ──────────────────────────────────────────────────────────── */
+  #toolbar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: #fff;
+    display: none;
+    align-items: center;
+    z-index: 20;
+    border-top: 1px solid #e8e8e8;
+  }
+  #toolbar.visible { display: flex; }
+  #toolbar-info, #toolbar-menu {
+    width: 90px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #000;
+    cursor: pointer;
+    background: none;
+    border: none;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+    padding: 0 12px;
+    height: 60px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #toolbar-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 0 4px;
+  }
+  #sensitivity-label {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: #aaa;
+    text-transform: uppercase;
+    user-select: none;
+  }
+  #sensitivity-slider {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 2px;
+    background: #ddd;
+    border-radius: 1px;
+    outline: none;
+    cursor: pointer;
+  }
+  #sensitivity-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #bbb;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
+  #sensitivity-slider::-moz-range-thumb {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #bbb;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
+  /* ── Menu overlay ─────────────────────────────────────────────────────── */
+  #menu-overlay {
+    position: fixed;
+    inset: 0;
+    background: #111;
+    z-index: 50;
+    display: none;
+    flex-direction: column;
+  }
+  #menu-overlay.open { display: flex; }
+  #menu-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: max(16px, env(safe-area-inset-top, 16px)) 16px 12px;
+    flex-shrink: 0;
+  }
+  #menu-close {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #fff;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 8px 4px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #face-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    padding: 0 2px;
+    overflow-y: auto;
+    flex: 1;
+    padding-bottom: calc(2px + env(safe-area-inset-bottom, 0px));
+  }
+  .face-tile {
+    position: relative;
+    aspect-ratio: 3 / 4;
+    cursor: pointer;
+    overflow: hidden;
+    background: #000;
+  }
+  .face-tile canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .face-tile-name {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 8px 6px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #fff;
+    text-align: center;
+    background: linear-gradient(transparent, rgba(0,0,0,0.65));
+    user-select: none;
+  }
+  .face-tile.active-face::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 3px solid #fff;
+    pointer-events: none;
+  }
+  /* ── Info modal ───────────────────────────────────────────────────────── */
+  #info-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.7);
+  }
+  #info-modal.open { display: flex; }
+  #info-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 32px 28px;
+    max-width: 300px;
+    text-align: center;
+  }
+  #info-box h2 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  #info-box p {
+    font-size: 14px;
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+  #info-close {
+    padding: 10px 28px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    background: #000;
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -136,6 +322,30 @@
 <div id="nav-arrows">
   <button class="nav-btn" id="prev-btn">&#8249;</button>
   <button class="nav-btn" id="next-btn">&#8250;</button>
+</div>
+
+<div id="toolbar">
+  <button id="toolbar-info">INFO</button>
+  <div id="toolbar-center">
+    <input id="sensitivity-slider" type="range" min="0" max="100" value="40">
+    <div id="sensitivity-label">Audio Sensitivity</div>
+  </div>
+  <button id="toolbar-menu">MENU</button>
+</div>
+
+<div id="menu-overlay">
+  <div id="menu-header">
+    <button id="menu-close">CLOSE</button>
+  </div>
+  <div id="face-grid"></div>
+</div>
+
+<div id="info-modal">
+  <div id="info-box">
+    <h2>Bla Bla Bla</h2>
+    <p>Speak and watch the faces react to your voice. Swipe or use arrows to switch faces. Adjust the sensitivity bar to match your environment.</p>
+    <button id="info-close">OK</button>
+  </div>
 </div>
 
 <script>
@@ -208,6 +418,9 @@
 // ─── Audio setup ─────────────────────────────────────────────────────────────
 let audioCtx, analyser, dataArray, smoothedVolume = 0;
 
+// ─── Sensitivity (persisted) ─────────────────────────────────────────────────
+let sensitivity = parseFloat(localStorage.getItem('blabla-sensitivity') || '0.4');
+
 async function startAudio() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -231,7 +444,9 @@ function getVolume() {
   for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
   const raw = (sum / dataArray.length) / 128.0;
   smoothedVolume = smoothedVolume * 0.75 + raw * 0.25;
-  return Math.min(smoothedVolume * 1.8, 1.0);
+  // sensitivity 0..1 maps divisor 0.9..0.06; vol can exceed 1.0 for exaggeration
+  const divisor = 0.9 - sensitivity * 0.84;
+  return Math.min(smoothedVolume / divisor, 1.3);
 }
 
 // ─── Canvas setup ─────────────────────────────────────────────────────────────
@@ -1402,11 +1617,10 @@ function drawMahomes(ctx, W, H, vol) {
 // ─── Face registry ────────────────────────────────────────────────────────────
 const faces = [
   { name: 'Mahomes',    draw: drawMahomes,    bg: '#0a0000' },
-  { name: 'Blob',       draw: drawBraviFrog,  bg: '#000000' },  // Bravi original — 2nd spot
-  { name: 'Stripes',    draw: drawStripes,    bg: '#000000' },  // from video
+  { name: 'Blob',       draw: drawBraviFrog,  bg: '#000000' },
+  { name: 'Stripes',    draw: drawStripes,    bg: '#000000' },
   { name: 'Pearl',      draw: drawPearl,      bg: '#080604' },
-  { name: 'Greg',       draw: drawGreg,       bg: '#0a0a0a' },
-  { name: 'Bear',       draw: drawBear,       bg: '#000000' },  // from video
+  { name: 'Bear',       draw: drawBear,       bg: '#000000' },
   { name: 'Parametric', draw: drawParametric, bg: '#000000' },
   { name: 'Happy',      draw: drawHappy,      bg: '#1a0a00' },
   { name: 'Monster',    draw: drawMonster,    bg: '#071a0d' },
@@ -1414,6 +1628,7 @@ const faces = [
   { name: 'Geometric',  draw: drawGeometric,  bg: '#0a0814' },
   { name: 'Elderly',    draw: drawElderly,    bg: '#100a00' },
   { name: 'Baby',       draw: drawBaby,       bg: '#100808' },
+  { name: 'Greg',       draw: drawGreg,       bg: '#0a0a0a' },
 ];
 
 let currentFace = 0;
@@ -1440,18 +1655,22 @@ function updateDots() {
 let uiVisible = false;
 let uiTimer = null;
 
+const toolbarEl = document.getElementById('toolbar');
+
 function showUI() {
   uiVisible = true;
   dotsEl.classList.add('visible');
   document.getElementById('nav-arrows').classList.add('visible');
+  toolbarEl.classList.add('visible');
   clearTimeout(uiTimer);
-  uiTimer = setTimeout(hideUI, 2500);
+  uiTimer = setTimeout(hideUI, 3000);
 }
 
 function hideUI() {
   uiVisible = false;
   dotsEl.classList.remove('visible');
   document.getElementById('nav-arrows').classList.remove('visible');
+  toolbarEl.classList.remove('visible');
 }
 
 function goToFace(idx, dir = 0) {
@@ -1535,6 +1754,77 @@ function drawLoop() {
 
   requestAnimationFrame(drawLoop);
 }
+
+// ─── Toolbar: sensitivity slider ─────────────────────────────────────────────
+const sensitivitySlider = document.getElementById('sensitivity-slider');
+sensitivitySlider.value = Math.round(sensitivity * 100);
+sensitivitySlider.addEventListener('input', () => {
+  sensitivity = sensitivitySlider.value / 100;
+  localStorage.setItem('blabla-sensitivity', sensitivity.toFixed(3));
+});
+// Prevent slider drag from hiding UI
+sensitivitySlider.addEventListener('touchstart', e => { clearTimeout(uiTimer); }, { passive: true });
+sensitivitySlider.addEventListener('touchend', () => { uiTimer = setTimeout(hideUI, 3000); }, { passive: true });
+
+// ─── Menu ─────────────────────────────────────────────────────────────────────
+const menuOverlay = document.getElementById('menu-overlay');
+const faceGrid = document.getElementById('face-grid');
+let thumbnailsRendered = false;
+
+function renderThumbnails() {
+  if (thumbnailsRendered) return;
+  thumbnailsRendered = true;
+  faces.forEach((face, i) => {
+    const tile = document.createElement('div');
+    tile.className = 'face-tile' + (i === currentFace ? ' active-face' : '');
+    const c = document.createElement('canvas');
+    const TW = 180, TH = 240;
+    c.width = TW; c.height = TH;
+    const tctx = c.getContext('2d');
+    tctx.fillStyle = face.bg;
+    tctx.fillRect(0, 0, TW, TH);
+    try { face.draw(tctx, TW, TH, 0); } catch(e) {}
+    const label = document.createElement('div');
+    label.className = 'face-tile-name';
+    label.textContent = face.name;
+    tile.appendChild(c);
+    tile.appendChild(label);
+    tile.addEventListener('click', () => {
+      closeMenu();
+      goToFace(i);
+    });
+    faceGrid.appendChild(tile);
+  });
+}
+
+function openMenu() {
+  renderThumbnails();
+  // refresh active highlight
+  faceGrid.querySelectorAll('.face-tile').forEach((t, i) => {
+    t.classList.toggle('active-face', i === currentFace);
+  });
+  menuOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeMenu() {
+  menuOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('toolbar-menu').addEventListener('click', openMenu);
+document.getElementById('menu-close').addEventListener('click', closeMenu);
+
+// ─── Info modal ───────────────────────────────────────────────────────────────
+const infoModal = document.getElementById('info-modal');
+document.getElementById('toolbar-info').addEventListener('click', () => {
+  infoModal.classList.add('open');
+});
+document.getElementById('info-close').addEventListener('click', () => {
+  infoModal.classList.remove('open');
+});
+infoModal.addEventListener('click', e => {
+  if (e.target === infoModal) infoModal.classList.remove('open');
+});
 
 // ─── Start flow ───────────────────────────────────────────────────────────────
 const startScreen = document.getElementById('start-screen');
