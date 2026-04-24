@@ -433,53 +433,214 @@ function drawSad(ctx, W, H, vol) {
   }
 }
 
-// 5. Frog Face
-function drawFrog(ctx, W, H, vol) {
+// 5. Bravi Blob — the Lorenzo Bravi original frog/blob character
+// B&W: white blob body, giant bullseye eyes, round nostrils, jaw drops open
+function drawBraviFrog(ctx, W, H, vol) {
   const cx = W / 2, cy = H / 2;
-  const r = Math.min(W, H) * 0.3;
+  const bw = Math.min(W * 0.70, H * 0.62);
+  const bh = Math.min(H * 0.80, W * 0.85);
+  const blobTop  = cy - bh * 0.50;
+  const jawLine  = cy + bh * 0.26;   // mouth split point
+  const jawH     = bh * 0.13;        // height of lower jaw strip
+  const jawDrop  = lerp(0, bh * 0.46, vol);
+  const blobL = cx - bw / 2, blobR = cx + bw / 2;
+  const cr = bw * 0.09;              // corner radius
 
-  // Body
-  ctx.fillStyle = '#5cb85c';
-  ctx.beginPath(); ctx.ellipse(cx, cy + r * 0.1, r * 1.05, r * 0.85, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#3d7a3d';
-  ctx.lineWidth = 3; ctx.stroke();
+  // ── Upper body (rounded top, flat bottom at jawLine) ──────────────────────
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.moveTo(blobL + cr, blobTop);
+  ctx.lineTo(blobR - cr, blobTop);
+  ctx.arcTo(blobR, blobTop, blobR, blobTop + cr, cr);
+  ctx.lineTo(blobR, jawLine);
+  ctx.lineTo(blobL, jawLine);
+  ctx.lineTo(blobL, blobTop + cr);
+  ctx.arcTo(blobL, blobTop, blobL + cr, blobTop, cr);
+  ctx.closePath();
+  ctx.fill();
 
-  // Belly
-  ctx.fillStyle = '#a8d8a8';
-  ctx.beginPath(); ctx.ellipse(cx, cy + r * 0.3, r * 0.55, r * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+  // ── Lower jaw strip (drops down with vol) ────────────────────────────────
+  const jY = jawLine + jawDrop;
+  const jBot = jY + jawH;
+  const jr = bw * 0.055;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.moveTo(blobL, jY);
+  ctx.lineTo(blobR, jY);
+  ctx.lineTo(blobR, jBot - jr);
+  ctx.arcTo(blobR, jBot, blobR - jr, jBot, jr);
+  ctx.lineTo(blobL + jr, jBot);
+  ctx.arcTo(blobL, jBot, blobL, jBot - jr, jr);
+  ctx.lineTo(blobL, jY);
+  ctx.closePath();
+  ctx.fill();
 
-  // Eye bumps on top
-  const eyeR = lerp(r * 0.2, r * 0.28, vol);
-  const eyeY = cy - r * 0.7;
-  ctx.fillStyle = '#5cb85c';
+  // ── Mouth line (visible when closed) ─────────────────────────────────────
+  const lineAlpha = Math.max(0, 1 - vol * 8);
+  if (lineAlpha > 0) {
+    ctx.save();
+    ctx.globalAlpha = lineAlpha;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(blobL, jawLine);
+    ctx.lineTo(blobR, jawLine);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── Eyes — bullseye concentric circles ────────────────────────────────────
+  const eyeY  = blobTop + bh * 0.30;
+  const eyeR  = bw * 0.215;
+  const eyeXL = cx - bw * 0.22;
+  const eyeXR = cx + bw * 0.22;
+
+  [eyeXL, eyeXR].forEach(ex => {
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(ex, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#000'; ctx.lineWidth = eyeR * 0.07;
+    ctx.beginPath(); ctx.arc(ex, eyeY, eyeR, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(ex, eyeY, eyeR * 0.70, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(ex, eyeY, eyeR * 0.44, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(ex, eyeY, eyeR * 0.20, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // ── Nostrils — two round black circles below eyes ─────────────────────────
+  const nY = eyeY + eyeR * 1.35;
+  const nR = eyeR * 0.35;
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.arc(cx - nR * 1.25, nY, nR, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + nR * 1.25, nY, nR, 0, Math.PI * 2); ctx.fill();
+}
+
+// 5b. Vertical Stripes Face — from the original Bla Bla Bla video
+// Same jaw-drop mechanic as the blob but both body and jaw are textured with bars
+function drawStripes(ctx, W, H, vol) {
+  const cx = W / 2, cy = H / 2;
+  const bw = Math.min(W * 0.66, H * 0.58);
+  const bh = Math.min(H * 0.76, W * 0.82);
+  const bL = cx - bw / 2, bR = cx + bw / 2;
+  const bT = cy - bh * 0.50;
+  const jawLine = cy + bh * 0.24;
+  const jawH = bh * 0.12;
+  const jawDrop = lerp(0, bh * 0.44, vol);
+  const jawY = jawLine + jawDrop;
+  const jBot = jawY + jawH;
+  const cr = bw * 0.07;
+  const numBars = 9;
+  const barW = bw / (numBars * 2 - 1);
+  const barGap = barW;
+
+  // ── Upper body: clipped white fill + bars ─────────────────────────────────
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(bL + cr, bT);
+  ctx.arcTo(bR, bT, bR, bT + cr, cr);
+  ctx.lineTo(bR, jawLine);
+  ctx.lineTo(bL, jawLine);
+  ctx.lineTo(bL, bT + cr);
+  ctx.arcTo(bL, bT, bL + cr, bT, cr);
+  ctx.closePath();
+  ctx.clip();
+  ctx.fillStyle = '#fff'; ctx.fillRect(bL, bT, bw, jawLine - bT);
+  ctx.fillStyle = '#000';
+  for (let i = 0; i < numBars; i++) ctx.fillRect(bL + i * (barW + barGap), bT, barW, jawLine - bT);
+  ctx.restore();
+
+  // ── Lower jaw strip: clipped white fill + bars ────────────────────────────
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(bL, jawY);
+  ctx.lineTo(bR, jawY);
+  ctx.lineTo(bR, jBot - cr);
+  ctx.arcTo(bR, jBot, bR - cr, jBot, cr);
+  ctx.lineTo(bL + cr, jBot);
+  ctx.arcTo(bL, jBot, bL, jBot - cr, cr);
+  ctx.lineTo(bL, jawY);
+  ctx.closePath();
+  ctx.clip();
+  ctx.fillStyle = '#fff'; ctx.fillRect(bL, jawY, bw, jawH);
+  ctx.fillStyle = '#000';
+  for (let i = 0; i < numBars; i++) ctx.fillRect(bL + i * (barW + barGap), jawY, barW, jawH);
+  ctx.restore();
+
+  // ── Mouth line (visible when closed) ──────────────────────────────────────
+  const lineAlpha = Math.max(0, 1 - vol * 8);
+  if (lineAlpha > 0) {
+    ctx.save(); ctx.globalAlpha = lineAlpha;
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(bL, jawLine); ctx.lineTo(bR, jawLine); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── Eyes: white circles punch through bars ────────────────────────────────
+  const eyeY = bT + bh * 0.30;
+  const eyeR = bw * 0.185;
+  [cx - bw * 0.22, cx + bw * 0.22].forEach(ex => {
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(ex, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#000'; ctx.lineWidth = eyeR * 0.07;
+    ctx.beginPath(); ctx.arc(ex, eyeY, eyeR, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(ex, eyeY, eyeR * 0.38, 0, Math.PI * 2); ctx.fill();
+  });
+}
+
+// 5c. Bear Face — minimal round dark face from the video
+function drawBear(ctx, W, H, vol) {
+  const cx = W / 2, cy = H / 2;
+  const r = Math.min(W, H) * 0.30;
+
+  // Ears
+  ctx.fillStyle = '#1a1208';
+  ctx.beginPath(); ctx.arc(cx - r * 0.72, cy - r * 0.78, r * 0.26, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + r * 0.72, cy - r * 0.78, r * 0.26, 0, Math.PI * 2); ctx.fill();
+  // Inner ears
+  ctx.fillStyle = '#3a2010';
+  ctx.beginPath(); ctx.arc(cx - r * 0.72, cy - r * 0.78, r * 0.14, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + r * 0.72, cy - r * 0.78, r * 0.14, 0, Math.PI * 2); ctx.fill();
+
+  // Face circle
+  ctx.fillStyle = '#1a1208';
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+
+  // Snout
+  ctx.fillStyle = '#2e1e0e';
+  ctx.beginPath(); ctx.ellipse(cx, cy + r * 0.28, r * 0.44, r * 0.30, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Eyes — round white with dark pupils that widen with vol
+  const eyeY = cy - r * 0.20;
+  const eyeR = lerp(r * 0.14, r * 0.20, vol);
+  ctx.fillStyle = '#fff';
   ctx.beginPath(); ctx.arc(cx - r * 0.35, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(cx + r * 0.35, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#3d7a3d'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(cx - r * 0.35, eyeY, eyeR, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(cx + r * 0.35, eyeY, eyeR, 0, Math.PI * 2); ctx.stroke();
-  // Pupils
   ctx.fillStyle = '#000';
-  const pupilOff = vol * 4;
-  ctx.beginPath(); ctx.arc(cx - r * 0.35, eyeY + pupilOff, eyeR * 0.45, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx + r * 0.35, eyeY + pupilOff, eyeR * 0.45, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx - r * 0.35, eyeY, eyeR * 0.52, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + r * 0.35, eyeY, eyeR * 0.52, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.beginPath(); ctx.arc(cx - r * 0.28, eyeY - eyeR * 0.28, eyeR * 0.22, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + r * 0.42, eyeY - eyeR * 0.28, eyeR * 0.22, 0, Math.PI * 2); ctx.fill();
 
-  // Wide frog mouth
-  const mouthY = cy + r * 0.05;
-  const mouthW = lerp(r * 0.5, r * 0.95, vol);
-  const mouthH = lerp(r * 0.05, r * 0.55, vol);
-  ctx.fillStyle = '#c0392b';
+  // Nose
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.ellipse(cx, cy + r * 0.16, r * 0.14, r * 0.10, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Mouth — opens with vol
+  const mouthY = cy + r * 0.38;
+  const mouthW = lerp(r * 0.18, r * 0.42, vol);
+  const mouthH = lerp(r * 0.04, r * 0.28, vol);
+  ctx.fillStyle = '#000';
   ctx.beginPath();
-  ctx.ellipse(cx, mouthY, mouthW, mouthH, 0, 0, Math.PI);
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = '#3d7a3d'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(cx - mouthW, mouthY); ctx.lineTo(cx + mouthW, mouthY); ctx.stroke();
-
-  // Tongue
-  if (vol > 0.4) {
-    ctx.fillStyle = '#e74c3c';
-    const tR = mouthW * 0.45 * (vol - 0.4) * 2.5;
+  ctx.ellipse(cx, mouthY, mouthW, mouthH, 0, 0, Math.PI * 2);
+  ctx.fill();
+  if (vol > 0.3) {
+    // Teeth
+    ctx.fillStyle = '#fff';
     ctx.beginPath();
-    ctx.ellipse(cx, mouthY + mouthH * 0.5, tR, tR * 0.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, mouthY - mouthH * 0.1, mouthW * 0.7, mouthH * 0.45, 0, 0, Math.PI);
     ctx.fill();
   }
 }
@@ -928,12 +1089,14 @@ function drawMahomes(ctx, W, H, vol) {
 
 // ─── Face registry ────────────────────────────────────────────────────────────
 const faces = [
-  { name: 'Mahomes',   draw: drawMahomes,   bg: '#0a0000' },
+  { name: 'Mahomes',    draw: drawMahomes,    bg: '#0a0000' },
+  { name: 'Blob',       draw: drawBraviFrog,  bg: '#000000' },  // Bravi original — 2nd spot
+  { name: 'Stripes',    draw: drawStripes,    bg: '#000000' },  // from video
+  { name: 'Bear',       draw: drawBear,       bg: '#000000' },  // from video
   { name: 'Parametric', draw: drawParametric, bg: '#000000' },
   { name: 'Happy',      draw: drawHappy,      bg: '#1a0a00' },
   { name: 'Monster',    draw: drawMonster,    bg: '#071a0d' },
   { name: 'Sad',        draw: drawSad,        bg: '#0a0a14' },
-  { name: 'Frog',       draw: drawFrog,       bg: '#071207' },
   { name: 'Geometric',  draw: drawGeometric,  bg: '#0a0814' },
   { name: 'Elderly',    draw: drawElderly,    bg: '#100a00' },
   { name: 'Baby',       draw: drawBaby,       bg: '#100808' },
