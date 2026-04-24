@@ -676,8 +676,259 @@ function drawBaby(ctx, W, H, vol) {
   }
 }
 
+// 9. Patrick Mahomes
+function drawMahomes(ctx, W, H, vol) {
+  const cx = W / 2, cy = H * 0.57;
+  const scale = Math.min(W, H) * 0.32;
+
+  // Jersey / neck
+  ctx.fillStyle = '#c8102e';
+  ctx.beginPath();
+  ctx.moveTo(cx - scale * 0.85, H);
+  ctx.lineTo(cx - scale * 0.75, cy + scale * 0.75);
+  ctx.bezierCurveTo(cx - scale * 0.5, cy + scale * 0.62, cx + scale * 0.5, cy + scale * 0.62, cx + scale * 0.75, cy + scale * 0.75);
+  ctx.lineTo(cx + scale * 0.85, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Jersey number 15
+  ctx.fillStyle = '#ffd700';
+  ctx.font = `bold ${scale * 0.28}px Impact, Arial`;
+  ctx.textAlign = 'center';
+  ctx.fillText('15', cx, cy + scale * 1.05);
+
+  // Neck
+  ctx.fillStyle = '#8b5e3c';
+  ctx.beginPath();
+  ctx.rect(cx - scale * 0.22, cy + scale * 0.5, scale * 0.44, scale * 0.28);
+  ctx.fill();
+
+  // Jaw / face base — wide strong jaw
+  ctx.fillStyle = '#8b5e3c';
+  ctx.beginPath();
+  ctx.moveTo(cx - scale * 0.55, cy - scale * 0.1);
+  ctx.bezierCurveTo(cx - scale * 0.58, cy + scale * 0.35, cx - scale * 0.4, cy + scale * 0.6, cx, cy + scale * 0.62);
+  ctx.bezierCurveTo(cx + scale * 0.4, cy + scale * 0.6, cx + scale * 0.58, cy + scale * 0.35, cx + scale * 0.55, cy - scale * 0.1);
+  ctx.bezierCurveTo(cx + scale * 0.52, cy - scale * 0.55, cx - scale * 0.52, cy - scale * 0.55, cx - scale * 0.55, cy - scale * 0.1);
+  ctx.fill();
+
+  // Ear left
+  ctx.fillStyle = '#7a5230';
+  ctx.beginPath(); ctx.ellipse(cx - scale * 0.56, cy + scale * 0.1, scale * 0.07, scale * 0.11, -0.2, 0, Math.PI * 2); ctx.fill();
+  // Ear right
+  ctx.beginPath(); ctx.ellipse(cx + scale * 0.56, cy + scale * 0.1, scale * 0.07, scale * 0.11, 0.2, 0, Math.PI * 2); ctx.fill();
+
+  // Goatee / beard shadow
+  ctx.fillStyle = '#3a2010';
+  ctx.globalAlpha = 0.45;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + scale * 0.42, scale * 0.28, scale * 0.14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Mustache
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + scale * 0.18, scale * 0.2, scale * 0.055, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Brows — thick, expressive, rise with volume
+  const browRise = lerp(0, scale * 0.1, vol);
+  const browFurrow = lerp(scale * 0.05, 0, vol); // furrow inward at rest, relaxes when loud
+  ctx.strokeStyle = '#1a0a00';
+  ctx.lineWidth = scale * 0.055;
+  ctx.lineCap = 'round';
+  // Left brow
+  ctx.beginPath();
+  ctx.moveTo(cx - scale * 0.48, cy - scale * 0.37 - browRise);
+  ctx.bezierCurveTo(
+    cx - scale * 0.28, cy - scale * 0.42 - browRise - browFurrow,
+    cx - scale * 0.12, cy - scale * 0.41 - browRise - browFurrow,
+    cx - scale * 0.05, cy - scale * 0.37 - browRise
+  );
+  ctx.stroke();
+  // Right brow
+  ctx.beginPath();
+  ctx.moveTo(cx + scale * 0.48, cy - scale * 0.37 - browRise);
+  ctx.bezierCurveTo(
+    cx + scale * 0.28, cy - scale * 0.42 - browRise - browFurrow,
+    cx + scale * 0.12, cy - scale * 0.41 - browRise - browFurrow,
+    cx + scale * 0.05, cy - scale * 0.37 - browRise
+  );
+  ctx.stroke();
+
+  // Eyes — almond-shaped, slightly hooded
+  const eyeOpen = lerp(scale * 0.08, scale * 0.14, vol);
+  const eyeY = cy - scale * 0.24;
+  [-1, 1].forEach(side => {
+    const ex = cx + side * scale * 0.27;
+    // White
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.ellipse(ex, eyeY, scale * 0.13, eyeOpen, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Iris — dark brown
+    ctx.fillStyle = '#2a1a08';
+    ctx.beginPath();
+    ctx.ellipse(ex, eyeY, scale * 0.075, Math.min(eyeOpen * 0.92, scale * 0.075), 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Pupil
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(ex, eyeY, scale * 0.038, 0, Math.PI * 2);
+    ctx.fill();
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.beginPath();
+    ctx.arc(ex + scale * 0.025, eyeY - scale * 0.025, scale * 0.018, 0, Math.PI * 2);
+    ctx.fill();
+    // Eyelid shadow (hooded)
+    ctx.fillStyle = '#7a5230';
+    ctx.globalAlpha = lerp(0.6, 0.15, vol);
+    ctx.beginPath();
+    ctx.ellipse(ex, eyeY - eyeOpen * 0.3, scale * 0.14, eyeOpen * 0.55, 0, Math.PI, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  });
+
+  // Nose — broad, flared nostrils
+  const noseY = cy + scale * 0.04;
+  ctx.fillStyle = '#7a5230';
+  ctx.beginPath();
+  ctx.ellipse(cx, noseY, scale * 0.09, scale * 0.075, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Nostrils
+  ctx.fillStyle = '#3a2010';
+  ctx.beginPath();
+  ctx.ellipse(cx - scale * 0.1, noseY + scale * 0.02, scale * 0.048, scale * 0.032, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx + scale * 0.1, noseY + scale * 0.02, scale * 0.048, scale * 0.032, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Mouth — the signature Mahomes wide yell
+  const mouthY = cy + scale * 0.28;
+  const mouthW = lerp(scale * 0.25, scale * 0.52, vol);
+  const jawDrop = lerp(scale * 0.02, scale * 0.46, vol);
+
+  // Lips outer
+  ctx.fillStyle = '#5a2a18';
+  ctx.beginPath();
+  // Upper lip
+  ctx.moveTo(cx - mouthW, mouthY);
+  ctx.bezierCurveTo(cx - mouthW * 0.5, mouthY - scale * 0.045, cx - mouthW * 0.15, mouthY - scale * 0.06, cx, mouthY - scale * 0.04);
+  ctx.bezierCurveTo(cx + mouthW * 0.15, mouthY - scale * 0.06, cx + mouthW * 0.5, mouthY - scale * 0.045, cx + mouthW, mouthY);
+  // Lower lip
+  ctx.bezierCurveTo(cx + mouthW * 0.6, mouthY + jawDrop * 0.35, cx + mouthW * 0.3, mouthY + jawDrop, cx, mouthY + jawDrop);
+  ctx.bezierCurveTo(cx - mouthW * 0.3, mouthY + jawDrop, cx - mouthW * 0.6, mouthY + jawDrop * 0.35, cx - mouthW, mouthY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Mouth interior
+  if (jawDrop > scale * 0.04) {
+    ctx.fillStyle = '#1a0808';
+    ctx.beginPath();
+    ctx.moveTo(cx - mouthW * 0.88, mouthY + scale * 0.01);
+    ctx.bezierCurveTo(cx - mouthW * 0.5, mouthY + scale * 0.01, cx + mouthW * 0.5, mouthY + scale * 0.01, cx + mouthW * 0.88, mouthY + scale * 0.01);
+    ctx.bezierCurveTo(cx + mouthW * 0.55, mouthY + jawDrop * 0.88, cx - mouthW * 0.55, mouthY + jawDrop * 0.88, cx - mouthW * 0.88, mouthY + scale * 0.01);
+    ctx.closePath();
+    ctx.fill();
+
+    // Teeth — top row
+    if (jawDrop > scale * 0.08) {
+      const teethH = Math.min(jawDrop * 0.38, scale * 0.12);
+      const teethW = mouthW * 1.6;
+      ctx.fillStyle = '#f0ece8';
+      ctx.beginPath();
+      ctx.roundRect(cx - teethW / 2, mouthY + scale * 0.01, teethW, teethH, [0, 0, 4, 4]);
+      ctx.fill();
+      // Tooth dividers
+      ctx.strokeStyle = '#c8c0b0';
+      ctx.lineWidth = 1.5;
+      const numTeeth = 6;
+      for (let i = 1; i < numTeeth; i++) {
+        const tx = cx - teethW / 2 + (teethW / numTeeth) * i;
+        ctx.beginPath();
+        ctx.moveTo(tx, mouthY + scale * 0.012);
+        ctx.lineTo(tx, mouthY + scale * 0.01 + teethH * 0.85);
+        ctx.stroke();
+      }
+
+      // Tongue at high volume
+      if (vol > 0.55) {
+        ctx.fillStyle = '#c0392b';
+        const tongueY = mouthY + teethH + scale * 0.02;
+        const tongueH = (jawDrop - teethH) * 0.55;
+        ctx.beginPath();
+        ctx.ellipse(cx, tongueY + tongueH / 2, mouthW * 0.55, tongueH / 2 + scale * 0.01, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  // ── Hair (drawn last, sits on top of face) ──────────────────────────────────
+  // Forehead skin patch — thin strip so hairline blends naturally
+  ctx.fillStyle = '#8b5e3c';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy - scale * 0.48, scale * 0.52, scale * 0.09, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const hairBounce = lerp(0, scale * 0.1, vol);
+  // Hair sits right at the top of the head
+  const hairRootY = cy - scale * 0.52;
+  // The poof: narrow stem, wide exploding crown — like his actual hair
+  ctx.fillStyle = '#1a0e06';
+
+  // Narrow base / stem connecting to scalp
+  ctx.beginPath();
+  ctx.ellipse(cx, hairRootY, scale * 0.46, scale * 0.15, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Mid section widens
+  ctx.beginPath();
+  ctx.ellipse(cx, hairRootY - scale * 0.35 - hairBounce * 0.3, scale * 0.44, scale * 0.38, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Crown explosion — wide mushroom-cloud top
+  ctx.beginPath();
+  ctx.ellipse(cx, hairRootY - scale * 0.72 - hairBounce, scale * 0.52, scale * 0.42, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Left wing bulge
+  ctx.beginPath();
+  ctx.ellipse(cx - scale * 0.38, hairRootY - scale * 0.58 - hairBounce * 0.8, scale * 0.24, scale * 0.38, -0.25, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Right wing bulge
+  ctx.beginPath();
+  ctx.ellipse(cx + scale * 0.38, hairRootY - scale * 0.58 - hairBounce * 0.8, scale * 0.24, scale * 0.38, 0.25, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Very top nub
+  ctx.beginPath();
+  ctx.ellipse(cx, hairRootY - scale * 1.08 - hairBounce, scale * 0.28, scale * 0.18, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Curl texture dots across the whole poof
+  ctx.fillStyle = '#0a0603';
+  const poofCenterY = hairRootY - scale * 0.72 - hairBounce;
+  [
+    // top cluster
+    [-0.24, -0.52], [0, -0.60], [0.24, -0.52],
+    // upper-mid
+    [-0.38, -0.28], [-0.14, -0.42], [0.14, -0.42], [0.38, -0.28],
+    // mid
+    [-0.38, -0.02], [-0.12, -0.14], [0.12, -0.14], [0.38, -0.02],
+    // lower
+    [-0.26, 0.20], [0, 0.14], [0.26, 0.20],
+  ].forEach(([dx, dy]) => {
+    ctx.beginPath();
+    ctx.arc(cx + dx * scale, poofCenterY + dy * scale, scale * 0.09, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
 // ─── Face registry ────────────────────────────────────────────────────────────
 const faces = [
+  { name: 'Mahomes',   draw: drawMahomes,   bg: '#0a0000' },
   { name: 'Parametric', draw: drawParametric, bg: '#000000' },
   { name: 'Happy',      draw: drawHappy,      bg: '#1a0a00' },
   { name: 'Monster',    draw: drawMonster,    bg: '#071a0d' },
