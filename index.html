@@ -685,6 +685,243 @@ function drawBear(ctx, W, H, vol) {
   }
 }
 
+// Pearl — sassy viral baby, "I'm gonna put you on the street"
+function drawPearl(ctx, W, H, vol) {
+  const cx = W / 2, cy = H * 0.46;
+  const scale = Math.min(W, H) * 0.30;
+
+  // Yellow-green dress body
+  ctx.fillStyle = '#a8c832';
+  ctx.beginPath();
+  ctx.moveTo(cx - scale * 0.9, H);
+  ctx.lineTo(cx - scale * 0.68, cy + scale * 0.72);
+  ctx.bezierCurveTo(cx - scale * 0.48, cy + scale * 0.60, cx + scale * 0.48, cy + scale * 0.60, cx + scale * 0.68, cy + scale * 0.72);
+  ctx.lineTo(cx + scale * 0.9, H);
+  ctx.closePath();
+  ctx.fill();
+  // Puff sleeves
+  ctx.beginPath(); ctx.ellipse(cx - scale * 0.62, cy + scale * 0.58, scale * 0.24, scale * 0.17, -0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + scale * 0.62, cy + scale * 0.58, scale * 0.24, scale * 0.17, 0.5, 0, Math.PI * 2); ctx.fill();
+  // Dress neckline detail
+  ctx.fillStyle = '#7cb828';
+  ctx.beginPath(); ctx.ellipse(cx, cy + scale * 0.60, scale * 0.30, scale * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Neck
+  ctx.fillStyle = '#ffd0b0';
+  ctx.beginPath(); ctx.ellipse(cx, cy + scale * 0.48, scale * 0.17, scale * 0.15, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Face — very round chubby baby
+  ctx.fillStyle = '#ffd0b0';
+  ctx.beginPath(); ctx.arc(cx, cy, scale * 0.52, 0, Math.PI * 2); ctx.fill();
+
+  // Chubby cheek blush
+  ctx.fillStyle = '#ffaa88';
+  ctx.globalAlpha = 0.45;
+  ctx.beginPath(); ctx.ellipse(cx - scale * 0.39, cy + scale * 0.14, scale * 0.20, scale * 0.13, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + scale * 0.39, cy + scale * 0.14, scale * 0.20, scale * 0.13, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Wispy blonde hair
+  ctx.fillStyle = '#f5cc50';
+  ctx.beginPath(); ctx.ellipse(cx, cy - scale * 0.44, scale * 0.48, scale * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+  // Individual wisps sticking up
+  ctx.strokeStyle = '#f0c040'; ctx.lineWidth = scale * 0.055; ctx.lineCap = 'round';
+  [[cx - scale * 0.10, -0.52, -0.18, -0.82, -0.06, -0.90],
+   [cx + scale * 0.08, -0.52, +0.22, -0.82, +0.14, -0.88],
+   [cx + scale * 0.24, -0.48, +0.40, -0.75, +0.30, -0.80]].forEach(([sx, sy, c1x, c1y, ex, ey]) => {
+    ctx.beginPath();
+    ctx.moveTo(sx, cy + sy * scale);
+    ctx.bezierCurveTo(cx + c1x * scale, cy + c1y * scale, cx + ex * scale, cy + ey * scale, cx + ex * scale, cy + ey * scale);
+    ctx.stroke();
+  });
+
+  // Eyes — sassy squint at rest, open wide when loud
+  const eyeY = cy - scale * 0.08;
+  const eyeH  = lerp(scale * 0.075, scale * 0.135, vol);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(cx - scale * 0.22, eyeY, scale * 0.13, eyeH, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + scale * 0.22, eyeY, scale * 0.13, eyeH, 0, 0, Math.PI * 2); ctx.fill();
+  // Blue irises
+  ctx.fillStyle = '#4a7acc';
+  ctx.beginPath(); ctx.ellipse(cx - scale * 0.22, eyeY, scale * 0.078, Math.min(eyeH * 0.9, scale * 0.078), 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + scale * 0.22, eyeY, scale * 0.078, Math.min(eyeH * 0.9, scale * 0.078), 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.ellipse(cx - scale * 0.22, eyeY, scale * 0.038, Math.min(eyeH * 0.52, scale * 0.038), 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + scale * 0.22, eyeY, scale * 0.038, Math.min(eyeH * 0.52, scale * 0.038), 0, 0, Math.PI * 2); ctx.fill();
+  // Sassy eyelid squint overdraw (reduces when loud)
+  const squint = lerp(eyeH * 0.55, 0, vol);
+  ctx.fillStyle = '#ffd0b0';
+  ctx.beginPath(); ctx.ellipse(cx - scale * 0.22, eyeY - eyeH * 0.4, scale * 0.14, squint, 0, Math.PI, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + scale * 0.22, eyeY - eyeH * 0.4, scale * 0.14, squint, 0, Math.PI, Math.PI * 2); ctx.fill();
+
+  // Button nose
+  ctx.fillStyle = '#e8a888';
+  ctx.beginPath(); ctx.ellipse(cx, cy + scale * 0.08, scale * 0.08, scale * 0.06, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#c07858'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(cx - scale * 0.052, cy + scale * 0.12, scale * 0.04, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx + scale * 0.052, cy + scale * 0.12, scale * 0.04, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+
+  // Mouth — sassy smirk → wide open
+  const mouthY = cy + scale * 0.28;
+  const mouthW = lerp(scale * 0.20, scale * 0.44, vol);
+  const openH  = lerp(scale * 0.03, scale * 0.26, vol);
+  if (vol < 0.12) {
+    // Smirk at rest
+    ctx.strokeStyle = '#b05038'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx - mouthW * 0.55, mouthY + scale * 0.01);
+    ctx.bezierCurveTo(cx - mouthW * 0.1, mouthY + scale * 0.04, cx + mouthW * 0.2, mouthY + scale * 0.05, cx + mouthW * 0.55, mouthY - scale * 0.01);
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = '#801808';
+    ctx.beginPath();
+    ctx.moveTo(cx - mouthW, mouthY);
+    ctx.bezierCurveTo(cx - mouthW * 0.6, mouthY - scale * 0.04, cx + mouthW * 0.6, mouthY - scale * 0.04, cx + mouthW, mouthY);
+    ctx.bezierCurveTo(cx + mouthW * 0.55, mouthY + openH, cx - mouthW * 0.55, mouthY + openH, cx - mouthW, mouthY);
+    ctx.closePath(); ctx.fill();
+    if (vol > 0.3) {
+      ctx.fillStyle = '#f5f0ec';
+      ctx.beginPath(); ctx.ellipse(cx, mouthY, mouthW * 0.68, openH * 0.38, 0, 0, Math.PI); ctx.fill();
+    }
+  }
+
+  // Caption
+  const capY = cy + scale * 1.28;
+  ctx.font = `bold ${Math.round(scale * 0.155)}px -apple-system, Helvetica, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillText("I'm gonna put you on the street", cx + 1, capY + 1);
+  ctx.fillStyle = '#fff';
+  ctx.fillText("I'm gonna put you on the street", cx, capY);
+}
+
+// Greg — slim face, short dark wavy hair, giant cheerful smile
+function drawGreg(ctx, W, H, vol) {
+  const cx = W / 2, cy = H * 0.50;
+  const scale = Math.min(W, H) * 0.30;
+
+  // Black t-shirt
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.moveTo(cx - scale * 0.9, H);
+  ctx.lineTo(cx - scale * 0.72, cy + scale * 0.72);
+  ctx.bezierCurveTo(cx - scale * 0.52, cy + scale * 0.60, cx + scale * 0.52, cy + scale * 0.60, cx + scale * 0.72, cy + scale * 0.72);
+  ctx.lineTo(cx + scale * 0.9, H);
+  ctx.closePath(); ctx.fill();
+  // Crew neck
+  ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.ellipse(cx, cy + scale * 0.55, scale * 0.28, scale * 0.09, 0, Math.PI, Math.PI * 2); ctx.stroke();
+
+  // Neck
+  ctx.fillStyle = '#f0c89a';
+  ctx.beginPath(); ctx.rect(cx - scale * 0.17, cy + scale * 0.46, scale * 0.34, scale * 0.28); ctx.fill();
+
+  // Face — slim oval, light skin
+  ctx.fillStyle = '#f5cfa0';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy - scale * 0.02, scale * 0.42, scale * 0.58, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Ears
+  ctx.fillStyle = '#e8b888';
+  ctx.beginPath(); ctx.ellipse(cx - scale * 0.44, cy + scale * 0.06, scale * 0.07, scale * 0.10, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + scale * 0.44, cy + scale * 0.06, scale * 0.07, scale * 0.10, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Hair — dark brown, swept back, slightly wavy
+  ctx.fillStyle = '#241408';
+  ctx.beginPath();
+  ctx.moveTo(cx - scale * 0.42, cy - scale * 0.42);
+  ctx.bezierCurveTo(cx - scale * 0.46, cy - scale * 0.78, cx - scale * 0.22, cy - scale * 0.98, cx + scale * 0.04, cy - scale * 0.98);
+  ctx.bezierCurveTo(cx + scale * 0.30, cy - scale * 0.98, cx + scale * 0.46, cy - scale * 0.78, cx + scale * 0.42, cy - scale * 0.42);
+  ctx.bezierCurveTo(cx + scale * 0.32, cy - scale * 0.52, cx - scale * 0.32, cy - scale * 0.52, cx - scale * 0.42, cy - scale * 0.42);
+  ctx.fill();
+  // Wave texture
+  ctx.fillStyle = '#3a2210';
+  ctx.beginPath(); ctx.ellipse(cx - scale * 0.10, cy - scale * 0.72, scale * 0.20, scale * 0.08, -0.35, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + scale * 0.16, cy - scale * 0.80, scale * 0.18, scale * 0.07, 0.25, 0, Math.PI * 2); ctx.fill();
+
+  // Eyebrows — rise with vol
+  const browRise = lerp(0, scale * 0.06, vol);
+  ctx.strokeStyle = '#3a2010'; ctx.lineWidth = scale * 0.042; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - scale * 0.37, cy - scale * 0.28 - browRise);
+  ctx.bezierCurveTo(cx - scale * 0.20, cy - scale * 0.34 - browRise, cx - scale * 0.08, cy - scale * 0.31 - browRise, cx - scale * 0.02, cy - scale * 0.27 - browRise);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx + scale * 0.37, cy - scale * 0.28 - browRise);
+  ctx.bezierCurveTo(cx + scale * 0.20, cy - scale * 0.34 - browRise, cx + scale * 0.08, cy - scale * 0.31 - browRise, cx + scale * 0.02, cy - scale * 0.27 - browRise);
+  ctx.stroke();
+
+  // Eyes — open warmly with smile
+  const eyeY  = cy - scale * 0.14;
+  const eyeH  = lerp(scale * 0.07, scale * 0.12, vol);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(cx - scale * 0.23, eyeY, scale * 0.12, eyeH, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + scale * 0.23, eyeY, scale * 0.12, eyeH, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#5a3818';
+  ctx.beginPath(); ctx.ellipse(cx - scale * 0.23, eyeY, scale * 0.07, Math.min(eyeH * 0.9, scale * 0.07), 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + scale * 0.23, eyeY, scale * 0.07, Math.min(eyeH * 0.9, scale * 0.07), 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.ellipse(cx - scale * 0.23, eyeY, scale * 0.032, Math.min(eyeH * 0.5, scale * 0.032), 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + scale * 0.23, eyeY, scale * 0.032, Math.min(eyeH * 0.5, scale * 0.032), 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.beginPath(); ctx.arc(cx - scale * 0.17, eyeY - eyeH * 0.3, scale * 0.016, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + scale * 0.29, eyeY - eyeH * 0.3, scale * 0.016, 0, Math.PI * 2); ctx.fill();
+  // Smile crinkle lines at eye corners
+  ctx.strokeStyle = '#c89870'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+  [[-1, 1], [1, 1]].forEach(([side]) => {
+    ctx.beginPath();
+    ctx.moveTo(cx + side * scale * 0.34, eyeY + eyeH);
+    ctx.bezierCurveTo(cx + side * scale * 0.40, eyeY + eyeH * 2.0, cx + side * scale * 0.42, eyeY + eyeH * 2.8, cx + side * scale * 0.36, eyeY + eyeH * 3.4);
+    ctx.stroke();
+  });
+
+  // Slim nose
+  ctx.strokeStyle = '#c89060'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(cx - scale * 0.052, cy + scale * 0.10, scale * 0.042, Math.PI * 0.05, Math.PI * 0.95); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx + scale * 0.052, cy + scale * 0.10, scale * 0.042, Math.PI * 0.05, Math.PI * 0.95); ctx.stroke();
+
+  // THE big smile — starts wide, goes huge
+  const mouthY = cy + scale * 0.30;
+  const smileW = lerp(scale * 0.36, scale * 0.50, vol);
+  const openH  = lerp(scale * 0.06, scale * 0.38, vol);
+
+  // Lips
+  ctx.fillStyle = '#c06050';
+  ctx.beginPath();
+  ctx.moveTo(cx - smileW, mouthY);
+  ctx.bezierCurveTo(cx - smileW * 0.55, mouthY - scale * 0.05, cx + smileW * 0.55, mouthY - scale * 0.05, cx + smileW, mouthY);
+  ctx.bezierCurveTo(cx + smileW * 0.62, mouthY + openH * 0.75, cx - smileW * 0.62, mouthY + openH * 0.75, cx - smileW, mouthY);
+  ctx.closePath(); ctx.fill();
+
+  // Teeth — always showing (he's always smiling)
+  ctx.fillStyle = '#f8f4f0';
+  ctx.beginPath();
+  ctx.moveTo(cx - smileW * 0.88, mouthY + scale * 0.008);
+  ctx.lineTo(cx + smileW * 0.88, mouthY + scale * 0.008);
+  ctx.bezierCurveTo(cx + smileW * 0.60, mouthY + openH * 0.52, cx - smileW * 0.60, mouthY + openH * 0.52, cx - smileW * 0.88, mouthY + scale * 0.008);
+  ctx.closePath(); ctx.fill();
+  // Tooth dividers
+  ctx.strokeStyle = '#ddd8d0'; ctx.lineWidth = 1;
+  for (let i = 1; i < 7; i++) {
+    const tx = cx - smileW * 0.72 + i * (smileW * 1.44 / 7);
+    ctx.beginPath(); ctx.moveTo(tx, mouthY + scale * 0.01); ctx.lineTo(tx, mouthY + openH * 0.44); ctx.stroke();
+  }
+
+  // Dark interior when wide open
+  if (openH > scale * 0.12) {
+    ctx.fillStyle = '#2a0a08';
+    ctx.beginPath();
+    ctx.ellipse(cx, mouthY + openH * 0.62, smileW * 0.52, openH * 0.30, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Nasolabial smile lines
+  ctx.strokeStyle = '#c09070'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(cx - scale * 0.26, cy + scale * 0.10); ctx.bezierCurveTo(cx - scale * 0.38, cy + scale * 0.22, cx - scale * 0.44, cy + scale * 0.28, cx - smileW * 0.88, mouthY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + scale * 0.26, cy + scale * 0.10); ctx.bezierCurveTo(cx + scale * 0.38, cy + scale * 0.22, cx + scale * 0.44, cy + scale * 0.28, cx + smileW * 0.88, mouthY); ctx.stroke();
+}
+
 // 6. Abstract Geometric
 function drawGeometric(ctx, W, H, vol) {
   const cx = W / 2, cy = H / 2;
@@ -1167,6 +1404,8 @@ const faces = [
   { name: 'Mahomes',    draw: drawMahomes,    bg: '#0a0000' },
   { name: 'Blob',       draw: drawBraviFrog,  bg: '#000000' },  // Bravi original — 2nd spot
   { name: 'Stripes',    draw: drawStripes,    bg: '#000000' },  // from video
+  { name: 'Pearl',      draw: drawPearl,      bg: '#080604' },
+  { name: 'Greg',       draw: drawGreg,       bg: '#0a0a0a' },
   { name: 'Bear',       draw: drawBear,       bg: '#000000' },  // from video
   { name: 'Parametric', draw: drawParametric, bg: '#000000' },
   { name: 'Happy',      draw: drawHappy,      bg: '#1a0a00' },
