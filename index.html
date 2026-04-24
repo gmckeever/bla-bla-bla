@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+<meta name="apple-mobile-web-app-title" content="Bla Bla Bla">
+<title>Bla Bla Bla</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #000;
+    overflow: hidden;
+    touch-action: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  }
+  #canvas {
+    display: block;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+  #start-screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    color: #fff;
+    z-index: 100;
+    gap: 24px;
+    padding: 40px;
+    text-align: center;
+  }
+  #start-screen h1 {
+    font-size: 48px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+  #start-screen p {
+    font-size: 16px;
+    color: #888;
+    max-width: 280px;
+    line-height: 1.6;
+  }
+  #start-btn, #retry-btn {
+    margin-top: 16px;
+    padding: 18px 56px;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: #fff;
+    color: #000;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #error-msg {
+    display: none;
+    color: #ff4444;
+    font-size: 14px;
+    max-width: 280px;
+    line-height: 1.5;
+  }
+  #dots {
+    position: fixed;
+    bottom: max(24px, env(safe-area-inset-bottom, 24px));
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+  }
+  #dots.visible { opacity: 1; pointer-events: auto; }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    transition: background 0.3s, transform 0.3s;
+    cursor: pointer;
+  }
+  .dot.active {
+    background: #fff;
+    transform: scale(1.3);
+  }
+  #nav-arrows {
+    position: fixed;
+    top: 50%;
+    left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 16px;
+    transform: translateY(-50%);
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+  }
+  #nav-arrows.visible { opacity: 1; pointer-events: auto; }
+  .nav-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="start-screen">
+  <h1>Bla<br>Bla<br>Bla</h1>
+  <p>Speak and the face will move with your voice</p>
+  <div id="error-msg">Please allow microphone access in Settings to use this app.</div>
+  <button id="start-btn">Start</button>
+  <button id="retry-btn" style="display:none">Try Again</button>
+</div>
+
+<div id="dots"></div>
+<div id="nav-arrows">
+  <button class="nav-btn" id="prev-btn">&#8249;</button>
+  <button class="nav-btn" id="next-btn">&#8250;</button>
+</div>
+
+<script>
+// ─── PWA: Manifest via blob ───────────────────────────────────────────────────
+(function() {
+  const manifest = {
+    name: "Bla Bla Bla",
+    short_name: "BlaBla",
+    display: "standalone",
+    orientation: "portrait",
+    background_color: "#000000",
+    theme_color: "#000000",
+    start_url: ".",
+    icons: [{ src: "icon.png", sizes: "192x192", type: "image/png" }]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = url;
+  document.head.appendChild(link);
+})();
+
+// ─── Service Worker (inline blob) ─────────────────────────────────────────────
+(function() {
+  if (!('serviceWorker' in navigator)) return;
+  const swCode = `
+    const CACHE = 'blabla-v1';
+    self.addEventListener('install', e => {
+      e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/'])));
+      self.skipWaiting();
+    });
+    self.addEventListener('activate', e => {
+      e.waitUntil(clients.claim());
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(
+        caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('/')))
+      );
+    });
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  const url = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(url).catch(() => {});
+})();
+
+// ─── Apple touch icon (canvas-drawn) ─────────────────────────────────────────
+(function() {
+  const ic = document.createElement('canvas');
+  ic.width = ic.height = 192;
+  const cx = ic.getContext('2d');
+  cx.fillStyle = '#000';
+  cx.fillRect(0, 0, 192, 192);
+  cx.fillStyle = '#fff';
+  cx.beginPath();
+  cx.ellipse(96, 96, 60, 72, 0, 0, Math.PI * 2);
+  cx.fill();
+  cx.fillStyle = '#000';
+  cx.beginPath(); cx.ellipse(76, 82, 8, 10, 0, 0, Math.PI * 2); cx.fill();
+  cx.beginPath(); cx.ellipse(116, 82, 8, 10, 0, 0, Math.PI * 2); cx.fill();
+  cx.beginPath();
+  cx.ellipse(96, 116, 18, 10, 0, 0, Math.PI);
+  cx.fill();
+  const link = document.createElement('link');
+  link.rel = 'apple-touch-icon';
+  link.href = ic.toDataURL();
+  document.head.appendChild(link);
+})();
+
+// ─── Audio setup ─────────────────────────────────────────────────────────────
+let audioCtx, analyser, dataArray, smoothedVolume = 0;
+
+async function startAudio() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.3;
+    source.connect(analyser);
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function getVolume() {
+  if (!analyser) return 0;
+  analyser.getByteFrequencyData(dataArray);
+  let sum = 0;
+  for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+  const raw = (sum / dataArray.length) / 128.0;
+  smoothedVolume = smoothedVolume * 0.75 + raw * 0.25;
+  return Math.min(smoothedVolume * 1.8, 1.0);
+}
+
+// ─── Canvas setup ─────────────────────────────────────────────────────────────
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = window.innerWidth * devicePixelRatio;
+  canvas.height = window.innerHeight * devicePixelRatio;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ─── FACE DRAWING FUNCTIONS ────────────────────────────────────────────────────
+
+// Helper: lerp
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// 1. Abstract Parametric Mask (Bauhaus minimal)
+function drawParametric(ctx, W, H, vol) {
+  const cx = W / 2, cy = H / 2;
+  const headW = W * 0.28, headH = H * 0.38;
+
+  // Head
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy - H * 0.02, headW, headH, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Eyes
+  const eyeY = cy - H * 0.08;
+  const eyeR = lerp(5, 10, vol);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(cx - headW * 0.32, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + headW * 0.32, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+
+  // Mouth: line → O
+  const mouthY = cy + H * 0.1;
+  const mouthW = headW * 0.55;
+  const openH = lerp(0, headH * 0.35, vol);
+
+  ctx.beginPath();
+  if (vol < 0.05) {
+    ctx.moveTo(cx - mouthW / 2, mouthY);
+    ctx.lineTo(cx + mouthW / 2, mouthY);
+  } else {
+    ctx.ellipse(cx, mouthY, mouthW / 2, openH, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#000';
+    ctx.fill();
+  }
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+
+// 2. Happy Round Face
+function drawHappy(ctx, W, H, vol) {
+  const cx = W / 2, cy = H / 2;
+  const r = Math.min(W, H) * 0.3;
+
+  // Rosy cheeks
+  const blush = Math.max(0, vol - 0.2);
+  ctx.fillStyle = `rgba(255,150,150,${0.2 + blush * 0.4})`;
+  ctx.beginPath(); ctx.ellipse(cx - r * 0.62, cy + r * 0.1, r * 0.22, r * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + r * 0.62, cy + r * 0.1, r * 0.22, r * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Head
+  ctx.fillStyle = '#f5d06a';
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#e8b84b';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Eyes: arcs that open wider
+  const eyeY = cy - r * 0.2;
+  const eyeOpenAngle = lerp(0.3, Math.PI * 0.5, vol);
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  [-1, 1].forEach(side => {
+    const ex = cx + side * r * 0.32;
+    ctx.beginPath();
+    ctx.arc(ex, eyeY, r * 0.12, Math.PI + eyeOpenAngle, Math.PI * 2 - eyeOpenAngle);
+    ctx.stroke();
+    // pupils
+    ctx.fillStyle = '#333';
+    ctx.beginPath(); ctx.arc(ex, eyeY + r * 0.04, r * 0.05, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // Mouth: smile → open circle
+  const mouthY = cy + r * 0.3;
+  const mouthW = r * 0.6;
+  const openH = lerp(0, r * 0.45, vol);
+  ctx.fillStyle = vol > 0.05 ? '#c0392b' : 'transparent';
+  ctx.beginPath();
+  ctx.ellipse(cx, mouthY, mouthW / 2, Math.max(1, openH), 0, 0, Math.PI);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Teeth at high volume
+  if (vol > 0.3) {
+    ctx.fillStyle = '#fff';
+    const tw = mouthW * 0.7;
+    const th = openH * 0.45;
+    ctx.beginPath();
+    ctx.rect(cx - tw / 2, mouthY - th * 0.1, tw, th);
+    ctx.fill();
+  }
+}
+
+// 3. Surprised Monster
+function drawMonster(ctx, W, H, vol) {
+  const cx = W / 2, cy = H / 2;
+  const scale = Math.min(W, H) * 0.35;
+
+  // Blob body
+  ctx.fillStyle = '#4a9e6b';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - scale);
+  ctx.bezierCurveTo(cx + scale * 1.2, cy - scale * 0.9, cx + scale * 1.1 + vol * scale * 0.2, cy + scale * 0.7, cx, cy + scale);
+  ctx.bezierCurveTo(cx - scale * 1.1 - vol * scale * 0.2, cy + scale * 0.7, cx - scale * 1.2, cy - scale * 0.9, cx, cy - scale);
+  ctx.fill();
+  ctx.strokeStyle = '#357a52';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // Bulging eyes
+  const eyeR = lerp(scale * 0.14, scale * 0.22, vol);
+  const eyeY = cy - scale * 0.25;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(cx - scale * 0.38, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + scale * 0.38, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+  // pupils
+  const pupilR = eyeR * 0.45;
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.arc(cx - scale * 0.38 + vol * 3, eyeY + vol * 2, pupilR, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + scale * 0.38 - vol * 3, eyeY + vol * 2, pupilR, 0, Math.PI * 2); ctx.fill();
+
+  // Wide mouth with teeth
+  const mouthY = cy + scale * 0.2;
+  const mouthW = lerp(scale * 0.3, scale * 0.9, vol);
+  const mouthH = lerp(scale * 0.05, scale * 0.55, vol);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath();
+  ctx.ellipse(cx, mouthY, mouthW, mouthH, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (vol > 0.2 && mouthH > 10) {
+    // Teeth top
+    ctx.fillStyle = '#fff';
+    const teeth = 4;
+    const tw = (mouthW * 1.6) / teeth;
+    for (let i = 0; i < teeth; i++) {
+      const tx = cx - mouthW * 0.8 + i * tw;
+      ctx.beginPath();
+      ctx.moveTo(tx, mouthY - mouthH * 0.2);
+      ctx.lineTo(tx + tw * 0.45, mouthY + mouthH * 0.35);
+      ctx.lineTo(tx + tw * 0.9, mouthY - mouthH * 0.2);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // Tongue
+    if (vol > 0.5) {
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.ellipse(cx, mouthY + mouthH * 0.4, mouthW * 0.5, mouthH * 0.45, 0, 0, Math.PI);
+      ctx.fill();
+    }
+  }
+}
+
+// 4. Sad/Neutral Mask
+function drawSad(ctx, W, H, vol) {
+  const cx = W / 2, cy = H / 2;
+  const headW = W * 0.24, headH = H * 0.34;
+
+  // Head: pale oval
+  ctx.fillStyle = '#c8b89a';
+  ctx.beginPath(); ctx.ellipse(cx, cy, headW, headH, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#a89070';
+  ctx.lineWidth = 3; ctx.stroke();
+
+  // Drooping eyebrows
+  const browDrop = lerp(0, -10, vol);
+  ctx.strokeStyle = '#5a3a1a';
+  ctx.lineWidth = 5; ctx.lineCap = 'round';
+  [-1, 1].forEach(side => {
+    const bx = cx + side * headW * 0.35;
+    const by = cy - headH * 0.35 + browDrop;
+    ctx.beginPath();
+    ctx.moveTo(bx - side * 18, by - 4 * side);
+    ctx.lineTo(bx + side * 18, by + 4 * side);
+    ctx.stroke();
+  });
+
+  // Eyes: half-closed circles
+  const eyeY = cy - headH * 0.18;
+  ctx.fillStyle = '#5a3a1a';
+  [-1, 1].forEach(side => {
+    const ex = cx + side * headW * 0.35;
+    ctx.beginPath();
+    ctx.arc(ex, eyeY, 10, 0, Math.PI * 2); ctx.fill();
+    // Eyelid (sad = drooping)
+    ctx.fillStyle = '#c8b89a';
+    ctx.beginPath();
+    ctx.ellipse(ex, eyeY - 2, 11, lerp(10, 3, vol), 0, Math.PI, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#5a3a1a';
+  });
+
+  // Mouth: downturned, opens downward
+  const mouthY = cy + headH * 0.25;
+  const mouthW = headW * 0.6;
+  const dropH = lerp(0, headH * 0.3, vol);
+  ctx.strokeStyle = '#5a3a1a';
+  ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - mouthW / 2, mouthY);
+  ctx.bezierCurveTo(
+    cx - mouthW / 4, mouthY + 16 + dropH,
+    cx + mouthW / 4, mouthY + 16 + dropH,
+    cx + mouthW / 2, mouthY
+  );
+  ctx.stroke();
+  if (vol > 0.15) {
+    ctx.fillStyle = '#4a2010';
+    ctx.beginPath();
+    ctx.moveTo(cx - mouthW / 2, mouthY);
+    ctx.bezierCurveTo(cx - mouthW / 4, mouthY + 16 + dropH, cx + mouthW / 4, mouthY + 16 + dropH, cx + mouthW / 2, mouthY);
+    ctx.lineTo(cx, mouthY + dropH * 1.1 + 10);
+    ctx.closePath(); ctx.fill();
+  }
+}
+
+// 5. Frog Face
+function drawFrog(ctx, W, H, vol) {
+  const cx = W / 2, cy = H / 2;
+  const r = Math.min(W, H) * 0.3;
+
+  // Body
+  ctx.fillStyle = '#5cb85c';
+  ctx.beginPath(); ctx.ellipse(cx, cy + r * 0.1, r * 1.05, r * 0.85, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#3d7a3d';
+  ctx.lineWidth = 3; ctx.stroke();
+
+  // Belly
+  ctx.fillStyle = '#a8d8a8';
+  ctx.beginPath(); ctx.ellipse(cx, cy + r * 0.3, r * 0.55, r * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Eye bumps on top
+  const eyeR = lerp(r * 0.2, r * 0.28, vol);
+  const eyeY = cy - r * 0.7;
+  ctx.fillStyle = '#5cb85c';
+  ctx.beginPath(); ctx.arc(cx - r * 0.35, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + r * 0.35, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#3d7a3d'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx - r * 0.35, eyeY, eyeR, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx + r * 0.35, eyeY, eyeR, 0, Math.PI * 2); ctx.stroke();
+  // Pupils
+  ctx.fillStyle = '#000';
+  const pupilOff = vol * 4;
+  ctx.beginPath(); ctx.arc(cx - r * 0.35, eyeY + pupilOff, eyeR * 0.45, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + r * 0.35, eyeY + pupilOff, eyeR * 0.45, 0, Math.PI * 2); ctx.fill();
+
+  // Wide frog mouth
+  const mouthY = cy + r * 0.05;
+  const mouthW = lerp(r * 0.5, r * 0.95, vol);
+  const mouthH = lerp(r * 0.05, r * 0.55, vol);
+  ctx.fillStyle = '#c0392b';
+  ctx.beginPath();
+  ctx.ellipse(cx, mouthY, mouthW, mouthH, 0, 0, Math.PI);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#3d7a3d'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(cx - mouthW, mouthY); ctx.lineTo(cx + mouthW, mouthY); ctx.stroke();
+
+  // Tongue
+  if (vol > 0.4) {
+    ctx.fillStyle = '#e74c3c';
+    const tR = mouthW * 0.45 * (vol - 0.4) * 2.5;
+    ctx.beginPath();
+    ctx.ellipse(cx, mouthY + mouthH * 0.5, tR, tR * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// 6. Abstract Geometric
+function drawGeometric(ctx, W, H, vol) {
+  const cx = W / 2, cy = H / 2;
+  const unit = Math.min(W, H) * 0.06;
+
+  const hue = Math.floor(vol * 60); // slight color shift with volume
+
+  // Head: big rectangle
+  const hw = unit * 5, hh = unit * 7;
+  ctx.strokeStyle = `hsl(${hue}, 80%, 70%)`;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(cx - hw, cy - hh, hw * 2, hh * 2);
+
+  // Eyes: triangles
+  const eyeSize = lerp(unit * 0.8, unit * 1.4, vol);
+  const eyeY = cy - hh * 0.3;
+  [-1, 1].forEach(side => {
+    const ex = cx + side * hw * 0.5;
+    ctx.strokeStyle = `hsl(${hue}, 80%, 70%)`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ex, eyeY - eyeSize);
+    ctx.lineTo(ex + eyeSize, eyeY + eyeSize);
+    ctx.lineTo(ex - eyeSize, eyeY + eyeSize);
+    ctx.closePath(); ctx.stroke();
+  });
+
+  // Nose: small diamond
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - unit * 0.4);
+  ctx.lineTo(cx + unit * 0.5, cy);
+  ctx.lineTo(cx, cy + unit * 0.4);
+  ctx.lineTo(cx - unit * 0.5, cy);
+  ctx.closePath(); ctx.stroke();
+
+  // Mouth: rectangle that grows vertically
+  const mw = hw * 1.0;
+  const mh = lerp(unit * 0.3, unit * 4, vol);
+  const mouthY = cy + hh * 0.3;
+  ctx.fillStyle = `hsl(${hue}, 80%, 15%)`;
+  ctx.fillRect(cx - mw / 2, mouthY, mw, mh);
+  ctx.strokeStyle = `hsl(${hue}, 80%, 70%)`;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(cx - mw / 2, mouthY, mw, mh);
+
+  // Scan lines inside mouth at high vol
+  if (vol > 0.3) {
+    ctx.strokeStyle = `hsl(${hue}, 80%, 40%)`;
+    ctx.lineWidth = 1;
+    const lines = Math.floor(mh / 8);
+    for (let i = 1; i <= lines; i++) {
+      const ly = mouthY + i * (mh / (lines + 1));
+      ctx.beginPath();
+      ctx.moveTo(cx - mw / 2 + 4, ly);
+      ctx.lineTo(cx + mw / 2 - 4, ly);
+      ctx.stroke();
+    }
+  }
+}
+
+// 7. Expressive Elderly Face
+function drawElderly(ctx, W, H, vol) {
+  const cx = W / 2, cy = H / 2;
+  const headW = W * 0.25, headH = H * 0.38;
+
+  // Head: slightly saggy oval
+  ctx.fillStyle = '#e8c89a';
+  ctx.beginPath();
+  ctx.moveTo(cx - headW * 0.7, cy - headH * 0.4);
+  ctx.bezierCurveTo(cx - headW * 0.9, cy - headH * 0.7, cx - headW * 0.7, cy - headH, cx, cy - headH);
+  ctx.bezierCurveTo(cx + headW * 0.7, cy - headH, cx + headW * 0.9, cy - headH * 0.7, cx + headW * 0.7, cy - headH * 0.4);
+  ctx.bezierCurveTo(cx + headW * 1.0, cy + headH * 0.3, cx + headW * 0.6, cy + headH, cx, cy + headH);
+  ctx.bezierCurveTo(cx - headW * 0.6, cy + headH, cx - headW * 1.0, cy + headH * 0.3, cx - headW * 0.7, cy - headH * 0.4);
+  ctx.fill();
+  ctx.strokeStyle = '#c8986a'; ctx.lineWidth = 3; ctx.stroke();
+
+  // Wrinkles (bezier curves)
+  ctx.strokeStyle = '#c8986a'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+  // Forehead
+  [[-0.3, -0.55, 0.3, -0.55], [-0.25, -0.48, 0.25, -0.48]].forEach(([x1, y1, x2, y2]) => {
+    ctx.beginPath();
+    ctx.moveTo(cx + x1 * headW, cy + y1 * headH);
+    ctx.bezierCurveTo(cx + (x1 + 0.1) * headW, cy + (y1 - 0.05) * headH, cx + (x2 - 0.1) * headW, cy + (y2 - 0.05) * headH, cx + x2 * headW, cy + y2 * headH);
+    ctx.stroke();
+  });
+  // Cheek lines
+  ctx.beginPath(); ctx.moveTo(cx - headW * 0.65, cy - headH * 0.1); ctx.bezierCurveTo(cx - headW * 0.6, cy + headH * 0.15, cx - headW * 0.55, cy + headH * 0.3, cx - headW * 0.45, cy + headH * 0.4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + headW * 0.65, cy - headH * 0.1); ctx.bezierCurveTo(cx + headW * 0.6, cy + headH * 0.15, cx + headW * 0.55, cy + headH * 0.3, cx + headW * 0.45, cy + headH * 0.4); ctx.stroke();
+
+  // Bushy eyebrows that rise
+  const browRise = lerp(0, headH * 0.12, vol);
+  ctx.strokeStyle = '#666'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+  [-1, 1].forEach(side => {
+    const bx = cx + side * headW * 0.35;
+    const by = cy - headH * 0.45 - browRise;
+    ctx.beginPath();
+    ctx.moveTo(bx - side * headW * 0.2, by + 4);
+    ctx.bezierCurveTo(bx, by - 6, bx + side * headW * 0.1, by + 2, bx + side * headW * 0.22, by + 6);
+    ctx.stroke();
+  });
+
+  // Eyes: small, deep-set
+  const eyeY = cy - headH * 0.28;
+  ctx.fillStyle = '#5a3a1a';
+  [-1, 1].forEach(side => {
+    const ex = cx + side * headW * 0.35;
+    const eyeH = lerp(6, 10, vol);
+    ctx.beginPath(); ctx.ellipse(ex, eyeY, 9, eyeH, 0, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // Nose: large bulb
+  ctx.fillStyle = '#d4a070';
+  ctx.beginPath(); ctx.ellipse(cx, cy + headH * 0.02, headW * 0.14, headH * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Mouth: toothless, opens wide
+  const mouthY = cy + headH * 0.35;
+  const mouthW = headW * 0.65;
+  const openH = lerp(0, headH * 0.28, vol);
+  ctx.fillStyle = '#5a2010';
+  ctx.beginPath();
+  ctx.moveTo(cx - mouthW / 2, mouthY);
+  ctx.bezierCurveTo(cx - mouthW / 4, mouthY + openH * 1.2, cx + mouthW / 4, mouthY + openH * 1.2, cx + mouthW / 2, mouthY);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#c8986a'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx - mouthW / 2, mouthY);
+  ctx.bezierCurveTo(cx - mouthW / 4, mouthY + openH * 1.2, cx + mouthW / 4, mouthY + openH * 1.2, cx + mouthW / 2, mouthY);
+  ctx.stroke();
+}
+
+// 8. Baby/Child Face
+function drawBaby(ctx, W, H, vol) {
+  const cx = W / 2, cy = H / 2;
+  const headR = Math.min(W, H) * 0.32;
+
+  // Chubby cheeks
+  ctx.fillStyle = '#ffcba4';
+  ctx.beginPath(); ctx.ellipse(cx - headR * 0.85, cy + headR * 0.1, headR * 0.45, headR * 0.38, -0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + headR * 0.85, cy + headR * 0.1, headR * 0.45, headR * 0.38, 0.2, 0, Math.PI * 2); ctx.fill();
+
+  // Big round head
+  ctx.fillStyle = '#ffe0b2';
+  ctx.beginPath(); ctx.arc(cx, cy, headR, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#ffb07c'; ctx.lineWidth = 3; ctx.stroke();
+
+  // Blush circles
+  const blush = Math.max(0.2, vol * 0.6);
+  ctx.fillStyle = `rgba(255, 150, 150, ${blush})`;
+  ctx.beginPath(); ctx.ellipse(cx - headR * 0.52, cy + headR * 0.12, headR * 0.18, headR * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + headR * 0.52, cy + headR * 0.12, headR * 0.18, headR * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Big wide eyes that open more
+  const eyeY = cy - headR * 0.2;
+  const eyeRX = lerp(headR * 0.16, headR * 0.22, vol);
+  const eyeRY = lerp(headR * 0.18, headR * 0.26, vol);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(cx - headR * 0.34, eyeY, eyeRX, eyeRY, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + headR * 0.34, eyeY, eyeRX, eyeRY, 0, 0, Math.PI * 2); ctx.fill();
+  // Irises
+  ctx.fillStyle = '#6699cc';
+  ctx.beginPath(); ctx.ellipse(cx - headR * 0.34, eyeY, eyeRX * 0.65, eyeRY * 0.65, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + headR * 0.34, eyeY, eyeRX * 0.65, eyeRY * 0.65, 0, 0, Math.PI * 2); ctx.fill();
+  // Pupils
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.ellipse(cx - headR * 0.34, eyeY, eyeRX * 0.3, eyeRY * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + headR * 0.34, eyeY, eyeRX * 0.3, eyeRY * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+  // Highlights
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.beginPath(); ctx.arc(cx - headR * 0.27, eyeY - eyeRY * 0.3, eyeRX * 0.18, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + headR * 0.41, eyeY - eyeRY * 0.3, eyeRX * 0.18, 0, Math.PI * 2); ctx.fill();
+
+  // Tiny nose
+  ctx.strokeStyle = '#ffb07c'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(cx - 7, cy + headR * 0.1, 6, Math.PI * 0.2, Math.PI * 0.8);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx + 7, cy + headR * 0.1, 6, Math.PI * 0.2, Math.PI * 0.8);
+  ctx.stroke();
+
+  // Mouth: small O that opens
+  const mouthY = cy + headR * 0.42;
+  const mouthW = lerp(headR * 0.12, headR * 0.55, vol);
+  const mouthH = lerp(headR * 0.06, headR * 0.38, vol);
+  ctx.fillStyle = '#c0392b';
+  ctx.beginPath(); ctx.ellipse(cx, mouthY, mouthW, mouthH, 0, 0, Math.PI * 2); ctx.fill();
+  if (vol > 0.2) {
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.ellipse(cx, mouthY - mouthH * 0.15, mouthW * 0.7, mouthH * 0.35, 0, 0, Math.PI); ctx.fill();
+  }
+}
+
+// ─── Face registry ────────────────────────────────────────────────────────────
+const faces = [
+  { name: 'Parametric', draw: drawParametric, bg: '#000000' },
+  { name: 'Happy',      draw: drawHappy,      bg: '#1a0a00' },
+  { name: 'Monster',    draw: drawMonster,    bg: '#071a0d' },
+  { name: 'Sad',        draw: drawSad,        bg: '#0a0a14' },
+  { name: 'Frog',       draw: drawFrog,       bg: '#071207' },
+  { name: 'Geometric',  draw: drawGeometric,  bg: '#0a0814' },
+  { name: 'Elderly',    draw: drawElderly,    bg: '#100a00' },
+  { name: 'Baby',       draw: drawBaby,       bg: '#100808' },
+];
+
+let currentFace = 0;
+let transitionFace = -1;
+let transitionAlpha = 1;
+let transitionDir = 0;
+
+// ─── Dots indicator ──────────────────────────────────────────────────────────
+const dotsEl = document.getElementById('dots');
+faces.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  d.addEventListener('click', () => goToFace(i));
+  dotsEl.appendChild(d);
+});
+
+function updateDots() {
+  dotsEl.querySelectorAll('.dot').forEach((d, i) => {
+    d.classList.toggle('active', i === currentFace);
+  });
+}
+
+// ─── Navigation ──────────────────────────────────────────────────────────────
+let uiVisible = false;
+let uiTimer = null;
+
+function showUI() {
+  uiVisible = true;
+  dotsEl.classList.add('visible');
+  document.getElementById('nav-arrows').classList.add('visible');
+  clearTimeout(uiTimer);
+  uiTimer = setTimeout(hideUI, 2500);
+}
+
+function hideUI() {
+  uiVisible = false;
+  dotsEl.classList.remove('visible');
+  document.getElementById('nav-arrows').classList.remove('visible');
+}
+
+function goToFace(idx, dir = 0) {
+  if (idx === currentFace) return;
+  transitionFace = currentFace;
+  transitionDir = dir;
+  transitionAlpha = 0;
+  currentFace = ((idx % faces.length) + faces.length) % faces.length;
+  updateDots();
+}
+
+document.getElementById('prev-btn').addEventListener('click', () => goToFace(currentFace - 1, -1));
+document.getElementById('next-btn').addEventListener('click', () => goToFace(currentFace + 1, 1));
+
+// ─── Touch / swipe ────────────────────────────────────────────────────────────
+let touchStartX = 0, touchStartY = 0;
+canvas.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+canvas.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+    if (dx < 0) goToFace(currentFace + 1, 1);
+    else goToFace(currentFace - 1, -1);
+  } else if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+    showUI();
+  }
+}, { passive: true });
+
+// Keyboard
+window.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') { showUI(); goToFace(currentFace + 1, 1); }
+  if (e.key === 'ArrowLeft')  { showUI(); goToFace(currentFace - 1, -1); }
+});
+
+// ─── Main draw loop ───────────────────────────────────────────────────────────
+let running = false;
+let faceWobble = 0;
+
+function drawLoop() {
+  if (!running) return;
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const vol = getVolume();
+
+  // Wobble offset for high volume
+  faceWobble = faceWobble * 0.8 + (vol > 0.6 ? (Math.random() - 0.5) * 8 * vol : 0) * 0.2;
+
+  // Background
+  const face = faces[currentFace];
+  ctx.fillStyle = face.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw transition (cross-fade)
+  if (transitionFace >= 0) {
+    transitionAlpha = Math.min(1, transitionAlpha + 0.08);
+    // Old face fading out
+    ctx.save();
+    ctx.globalAlpha = 1 - transitionAlpha;
+    ctx.fillStyle = faces[transitionFace].bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.translate(faceWobble, 0);
+    faces[transitionFace].draw(ctx, W, H, vol);
+    ctx.restore();
+    // New face fading in
+    ctx.save();
+    ctx.globalAlpha = transitionAlpha;
+    ctx.translate(faceWobble, 0);
+    face.draw(ctx, W, H, vol);
+    ctx.restore();
+    if (transitionAlpha >= 1) transitionFace = -1;
+  } else {
+    ctx.save();
+    ctx.translate(faceWobble, 0);
+    face.draw(ctx, W, H, vol);
+    ctx.restore();
+  }
+
+  requestAnimationFrame(drawLoop);
+}
+
+// ─── Start flow ───────────────────────────────────────────────────────────────
+const startScreen = document.getElementById('start-screen');
+const startBtn    = document.getElementById('start-btn');
+const retryBtn    = document.getElementById('retry-btn');
+const errorMsg    = document.getElementById('error-msg');
+
+async function start() {
+  startBtn.textContent = '...';
+  startBtn.disabled = true;
+  const ok = await startAudio();
+  if (ok) {
+    startScreen.style.display = 'none';
+    running = true;
+    showUI();
+    requestAnimationFrame(drawLoop);
+  } else {
+    startBtn.style.display = 'none';
+    retryBtn.style.display = 'block';
+    errorMsg.style.display = 'block';
+    startBtn.textContent = 'Start';
+    startBtn.disabled = false;
+  }
+}
+
+startBtn.addEventListener('click', start);
+retryBtn.addEventListener('click', () => {
+  retryBtn.style.display = 'none';
+  errorMsg.style.display = 'none';
+  startBtn.style.display = 'block';
+  start();
+});
+</script>
+</body>
+</html>
