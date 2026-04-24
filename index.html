@@ -1026,65 +1026,100 @@ function drawMahomes(ctx, W, H, vol) {
   }
 
   // ── Hair (drawn last, sits on top of face) ──────────────────────────────────
-  // Forehead skin patch — thin strip so hairline blends naturally
+  const hairBounce = lerp(0, scale * 0.08, vol);
+  const hairRootY = cy - scale * 0.50;
+  ctx.fillStyle = '#1a0e06';
+
+  // Wide lateral dreads — extend far left and right from the head
+  // Left dread mass: sweeps out to the left from mid-scalp
+  ctx.beginPath();
+  ctx.ellipse(cx - scale * 0.72, hairRootY - scale * 0.18 - hairBounce * 0.4,
+              scale * 0.46, scale * 0.28, -0.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx - scale * 0.92, hairRootY - scale * 0.38 - hairBounce * 0.5,
+              scale * 0.32, scale * 0.22, -0.65, 0, Math.PI * 2);
+  ctx.fill();
+  // Tip of left dread
+  ctx.beginPath();
+  ctx.ellipse(cx - scale * 1.05, hairRootY - scale * 0.55 - hairBounce * 0.6,
+              scale * 0.20, scale * 0.16, -0.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Right dread mass
+  ctx.beginPath();
+  ctx.ellipse(cx + scale * 0.72, hairRootY - scale * 0.18 - hairBounce * 0.4,
+              scale * 0.46, scale * 0.28, 0.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx + scale * 0.92, hairRootY - scale * 0.38 - hairBounce * 0.5,
+              scale * 0.32, scale * 0.22, 0.65, 0, Math.PI * 2);
+  ctx.fill();
+  // Tip of right dread
+  ctx.beginPath();
+  ctx.ellipse(cx + scale * 1.05, hairRootY - scale * 0.55 - hairBounce * 0.6,
+              scale * 0.20, scale * 0.16, 0.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Central base connecting to scalp
+  ctx.beginPath();
+  ctx.ellipse(cx, hairRootY + scale * 0.02, scale * 0.50, scale * 0.15, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Mid-rise center poof
+  ctx.beginPath();
+  ctx.ellipse(cx, hairRootY - scale * 0.32 - hairBounce * 0.4,
+              scale * 0.46, scale * 0.36, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Crown top — rises up
+  ctx.beginPath();
+  ctx.ellipse(cx, hairRootY - scale * 0.75 - hairBounce,
+              scale * 0.40, scale * 0.38, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx, hairRootY - scale * 1.02 - hairBounce,
+              scale * 0.24, scale * 0.20, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Curl texture — distributed across crown and side dreads
+  ctx.fillStyle = '#0a0603';
+  const poofCY = hairRootY - scale * 0.70 - hairBounce;
+  [
+    // Crown
+    [-0.22, -0.44], [0, -0.52], [0.22, -0.44],
+    [-0.30, -0.20], [-0.08, -0.34], [0.08, -0.34], [0.30, -0.20],
+    [-0.22,  0.04], [0, -0.08], [0.22,  0.04],
+    // Left wing curls
+    [-0.60, -0.10], [-0.78, -0.26], [-0.92, -0.40],
+    // Right wing curls
+    [ 0.60, -0.10], [ 0.78, -0.26], [ 0.92, -0.40],
+  ].forEach(([dx, dy]) => {
+    ctx.beginPath();
+    ctx.arc(cx + dx * scale, poofCY + dy * scale, scale * 0.08, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Forehead skin patch under hairline
   ctx.fillStyle = '#8b5e3c';
   ctx.beginPath();
   ctx.ellipse(cx, cy - scale * 0.48, scale * 0.52, scale * 0.09, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  const hairBounce = lerp(0, scale * 0.1, vol);
-  // Hair sits right at the top of the head
-  const hairRootY = cy - scale * 0.52;
-  // The poof: narrow stem, wide exploding crown — like his actual hair
-  ctx.fillStyle = '#1a0e06';
-
-  // Narrow base / stem connecting to scalp
+  // ── Headband — white strip across the forehead ────────────────────────────
+  const hbY = cy - scale * 0.42;
+  const hbH = scale * 0.10;
+  const hbW = scale * 0.56;
+  ctx.fillStyle = '#f0f0f0';
   ctx.beginPath();
-  ctx.ellipse(cx, hairRootY, scale * 0.46, scale * 0.15, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, hbY + hbH / 2, hbW, hbH / 2 + 2, 0, 0, Math.PI * 2);
   ctx.fill();
-
-  // Mid section widens
+  // Subtle band shading
+  ctx.strokeStyle = '#d0d0d0';
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.ellipse(cx, hairRootY - scale * 0.35 - hairBounce * 0.3, scale * 0.44, scale * 0.38, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Crown explosion — wide mushroom-cloud top
-  ctx.beginPath();
-  ctx.ellipse(cx, hairRootY - scale * 0.72 - hairBounce, scale * 0.52, scale * 0.42, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Left wing bulge
-  ctx.beginPath();
-  ctx.ellipse(cx - scale * 0.38, hairRootY - scale * 0.58 - hairBounce * 0.8, scale * 0.24, scale * 0.38, -0.25, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Right wing bulge
-  ctx.beginPath();
-  ctx.ellipse(cx + scale * 0.38, hairRootY - scale * 0.58 - hairBounce * 0.8, scale * 0.24, scale * 0.38, 0.25, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Very top nub
-  ctx.beginPath();
-  ctx.ellipse(cx, hairRootY - scale * 1.08 - hairBounce, scale * 0.28, scale * 0.18, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Curl texture dots across the whole poof
-  ctx.fillStyle = '#0a0603';
-  const poofCenterY = hairRootY - scale * 0.72 - hairBounce;
-  [
-    // top cluster
-    [-0.24, -0.52], [0, -0.60], [0.24, -0.52],
-    // upper-mid
-    [-0.38, -0.28], [-0.14, -0.42], [0.14, -0.42], [0.38, -0.28],
-    // mid
-    [-0.38, -0.02], [-0.12, -0.14], [0.12, -0.14], [0.38, -0.02],
-    // lower
-    [-0.26, 0.20], [0, 0.14], [0.26, 0.20],
-  ].forEach(([dx, dy]) => {
-    ctx.beginPath();
-    ctx.arc(cx + dx * scale, poofCenterY + dy * scale, scale * 0.09, 0, Math.PI * 2);
-    ctx.fill();
-  });
+  ctx.ellipse(cx, hbY + hbH / 2, hbW, hbH / 2 + 2, 0, 0, Math.PI * 2);
+  ctx.stroke();
 }
 
 // ─── Face registry ────────────────────────────────────────────────────────────
