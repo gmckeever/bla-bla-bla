@@ -29,8 +29,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: #000;
-    color: #fff;
+    background: transparent;
+    color: #ff2200;
     z-index: 100;
     gap: 24px;
     padding: 40px;
@@ -41,10 +41,11 @@
     font-weight: 700;
     letter-spacing: 4px;
     text-transform: uppercase;
+    color: #ff2200;
   }
   #start-screen p {
     font-size: 16px;
-    color: #888;
+    color: #cc1a00;
     max-width: 280px;
     line-height: 1.6;
   }
@@ -55,8 +56,8 @@
     font-weight: 600;
     letter-spacing: 2px;
     text-transform: uppercase;
-    background: #fff;
-    color: #000;
+    background: #ff2200;
+    color: #fff;
     border: none;
     border-radius: 50px;
     cursor: pointer;
@@ -226,26 +227,27 @@
   }
   #face-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 2px;
-    padding: 0 2px;
     overflow-y: auto;
     flex: 1;
     padding-bottom: calc(2px + env(safe-area-inset-bottom, 0px));
+    /* grid-auto-rows set by JS so exactly 2 rows fill the viewport */
+    scroll-snap-type: y mandatory;
   }
   .face-tile {
     position: relative;
-    aspect-ratio: 3 / 4;
     cursor: pointer;
     overflow: hidden;
     background: #000;
+    scroll-snap-align: start;
   }
   .face-tile canvas {
     width: 100%;
     height: 100%;
     display: block;
-    object-fit: cover;
-    object-position: center 40%;
+    object-fit: contain;
+    object-position: center center;
   }
   .face-tile-name {
     position: absolute;
@@ -330,8 +332,16 @@
     inset: 0;
     width: 100%;
     height: 100%;
-    opacity: 0.2;
+    opacity: 1;
     pointer-events: none;
+    z-index: 0;
+  }
+  #start-screen h1,
+  #start-screen p,
+  #start-screen #error-msg,
+  #start-btn, #retry-btn {
+    position: relative;
+    z-index: 1;
   }
 
   #swipe-hint {
@@ -389,10 +399,10 @@
   <div id="toolbar-center">
     <div id="slider-row">
         <span class="slider-end-label">SOFT</span>
-        <input id="sensitivity-slider" type="range" min="0" max="100" value="40">
+        <input id="sensitivity-slider" type="range" min="0" max="100" value="0">
         <span class="slider-end-label">LOUD</span>
       </div>
-      <div id="sensitivity-label">Audio Sensitivity</div>
+      <div id="sensitivity-label">Volume Target</div>
   </div>
   <button id="toolbar-menu">MENU</button>
 </div>
@@ -483,7 +493,7 @@
 let audioCtx, analyser, dataArray, smoothedVolume = 0;
 
 // ─── Sensitivity (persisted) ─────────────────────────────────────────────────
-let sensitivity = parseFloat(localStorage.getItem('blabla-sensitivity') || '0.4');
+let sensitivity = parseFloat(localStorage.getItem('blabla-sensitivity') || '0');
 
 async function startAudio() {
   try {
@@ -492,9 +502,9 @@ async function startAudio() {
     const source = audioCtx.createMediaStreamSource(stream);
     analyser = audioCtx.createAnalyser();
     analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.3;
+    analyser.smoothingTimeConstant = 0;
     source.connect(analyser);
-    dataArray = new Uint8Array(analyser.frequencyBinCount);
+    dataArray = new Uint8Array(analyser.fftSize);
     return true;
   } catch (e) {
     return false;
@@ -503,14 +513,41 @@ async function startAudio() {
 
 function getVolume() {
   if (!analyser) return 0;
-  analyser.getByteFrequencyData(dataArray);
+
+  // True RMS from time-domain waveform — measures actual acoustic loudness
+  analyser.getByteTimeDomainData(dataArray);
   let sum = 0;
-  for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-  const raw = (sum / dataArray.length) / 128.0;
+  for (let i = 0; i < dataArray.length; i++) {
+    const s = (dataArray[i] - 128) / 128;
+    sum += s * s;
+  }
+  const rms = Math.sqrt(sum / dataArray.length);
+  const dbFS = 20 * Math.log10(rms + 1e-6);
+
+  // Sensitivity slider (SOFT=0 → easier, LOUD=1 → harder) shifts all thresholds ±15dB
+  // Slider → dbOffset → dBFS thresholds:
+  // | Slider | sensitivity | dbOffset | FLOOR / TOP / CEIL        |
+  // |--------|-------------|----------|---------------------------|
+  // |   0%   |     0.0     |   0 dB   | -50 / -20 /  -5 dBFS      |
+  // |  50%   |     0.5     | +7.5 dB  | -42.5 / -12.5 / +2.5 dBFS|
+  // | 100%   |     1.0     | +15 dB   |  -35 /  -5 / +10 dBFS     |
+  const dbOffset = sensitivity * 15;
+
+  const FLOOR = -50 + dbOffset;  // below = silence, no movement
+  const TOP   = -20 + dbOffset;  // above = exaggeration zone
+  const CEIL  =  -5 + dbOffset;  // exaggeration cap (vol 1.3)
+
+  let raw = 0;
+  if (dbFS >= FLOOR) {
+    if (dbFS <= TOP) {
+      raw = (dbFS - FLOOR) / (TOP - FLOOR);
+    } else {
+      raw = 1.0 + Math.min((dbFS - TOP) / (CEIL - TOP), 1) * 0.3;
+    }
+  }
+
   smoothedVolume = smoothedVolume * 0.75 + raw * 0.25;
-  // sensitivity 0..1 maps divisor 0.9..0.06; vol can exceed 1.0 for exaggeration
-  const divisor = 0.9 - sensitivity * 0.84;
-  return Math.min(smoothedVolume / divisor, 1.3);
+  return smoothedVolume;
 }
 
 // ─── Canvas setup ─────────────────────────────────────────────────────────────
@@ -1678,8 +1715,214 @@ function drawMahomes(ctx, W, H, vol) {
   ctx.stroke();
 }
 
+// 14. Googly — giant circle head (bleeds off all edges), bullseye eyes, dropping jaw
+function drawGoogly(ctx, W, H, vol) {
+  const cx    = W / 2;
+  // Circle is so large it bleeds past all four edges
+  const headR  = H * 0.365;
+  const headCY = H * 0.415;
+  const v  = Math.min(vol, 1);
+  const xv = Math.max(0, (vol - 1) / 0.3);  // 0→1 in exaggeration zone
+
+  // Vigorous shake in exaggeration zone — random per-frame offset
+  const shakeAmp = xv * W * 0.035;
+  if (shakeAmp > 0) {
+    ctx.save();
+    ctx.translate(
+      (Math.random() - 0.5) * 2 * shakeAmp,
+      (Math.random() - 0.5) * 2 * shakeAmp
+    );
+  }
+
+  const jawLine = headCY + headR * 0.55;   // top edge of mouth opening
+  const jawDrop = lerp(0, headR * 0.50, v); // gap height grows with voice
+  const chinY   = jawLine + jawDrop;         // top of lower chin
+
+  // White circle head
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(cx, headCY, headR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Jaw mechanism: black gap opens between face and dropping chin
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, headCY, headR, 0, Math.PI * 2);
+  ctx.clip();
+  // Black mouth gap
+  ctx.fillStyle = '#000';
+  ctx.fillRect(cx - headR, jawLine, headR * 2, jawDrop);
+  // White chin stays below the gap
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(cx - headR, chinY, headR * 2, headR);
+  ctx.restore();
+
+  // Mouth seam line (only visible when mouth is fully closed)
+  const lineAlpha = Math.max(0, 1 - vol * 8);
+  if (lineAlpha > 0) {
+    const dy = jawLine - headCY;
+    const hw = Math.sqrt(Math.max(0, headR * headR - dy * dy));
+    ctx.save();
+    ctx.globalAlpha = lineAlpha;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - hw, jawLine);
+    ctx.lineTo(cx + hw, jawLine);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Bullseye eyes: sit high in the circle, close together, large
+  const eyeY  = headCY - headR * 0.44;
+  const eyeR  = headR * 0.190 * (1 + xv * 0.12);
+  const eyeXL = cx - headR * 0.25;
+  const eyeXR = cx + headR * 0.25;
+
+  [eyeXL, eyeXR].forEach(lx => {
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(lx, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#000'; ctx.lineWidth = eyeR * 0.09;
+    ctx.beginPath(); ctx.arc(lx, eyeY, eyeR, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(lx, eyeY, eyeR * 0.68, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(lx, eyeY, eyeR * 0.43, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(lx, eyeY, eyeR * 0.20, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // Nostrils — small dots nestled below the inner edges of the eyes
+  const nY = eyeY + eyeR * 1.20;
+  const nR  = eyeR * 0.38;
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.arc(cx - nR * 1.4, nY, nR, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + nR * 1.4, nY, nR, 0, Math.PI * 2); ctx.fill();
+
+  if (shakeAmp > 0) ctx.restore();
+}
+
+// 15. Snowman — two-circle body, eyes float up with voice, pendulums hang by inertia
+function drawSnowman(ctx, W, H, vol) {
+  const cx = W / 2;
+  const v  = Math.min(vol, 1);
+  const xv = Math.max(0, (vol - 1) / 0.3);
+
+  // Shake in exaggeration zone
+  const shakeAmp = xv * W * 0.030;
+  if (shakeAmp > 0) {
+    ctx.save();
+    ctx.translate(
+      (Math.random() - 0.5) * 2 * shakeAmp,
+      (Math.random() - 0.5) * 2 * shakeAmp
+    );
+  }
+
+  const headR  = H * 0.420;
+  const headCY = H * 0.500;
+
+  // Black head
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.arc(cx, headCY, headR, 0, Math.PI * 2); ctx.fill();
+
+  // Eyes: float up with voice, pop above head at exaggeration
+  const eyeRise = lerp(0, headR * 0.80, v) + xv * headR * 0.40;
+  const eyeY    = headCY - headR * 0.22 - eyeRise;
+  const eyeR    = headR * 0.175;
+  const eyeXL   = cx - headR * 0.27;
+  const eyeXR   = cx + headR * 0.27;
+
+  ctx.fillStyle = '#fff';
+  [eyeXL, eyeXR].forEach(ex => {
+    ctx.beginPath(); ctx.arc(ex, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // Pendulums: hang from eye bottom, lengthen as eyes rise
+  const pendLen = lerp(0, headR * 0.70, v) + xv * headR * 0.20;
+  if (pendLen > 2) {
+    const dotR = headR * 0.042;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    [eyeXL, eyeXR].forEach(ex => {
+      const endY = eyeY + eyeR + pendLen;
+      ctx.beginPath(); ctx.moveTo(ex, eyeY + eyeR); ctx.lineTo(ex, endY); ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(ex, endY, dotR, 0, Math.PI * 2); ctx.fill();
+    });
+  }
+
+  // Nose: figure-8, two small white circles fixed in head center
+  const noseY = headCY + headR * 0.08;
+  const noseR = headR * 0.072;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(cx - noseR * 0.75, noseY, noseR, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + noseR * 0.75, noseY, noseR, 0, Math.PI * 2); ctx.fill();
+
+  // Mouth: white ring below nose, grows with voice
+  const mouthY = headCY + headR * 0.42;
+  const mouthR = lerp(headR * 0.065, headR * 0.185, v);
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.arc(cx, mouthY, mouthR, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = Math.max(1.5, headR * 0.038);
+  ctx.beginPath(); ctx.arc(cx, mouthY, mouthR, 0, Math.PI * 2); ctx.stroke();
+
+  if (shakeAmp > 0) ctx.restore();
+}
+
+// 16. Orbs — 5 vertical bars, 3 hollow rings slide with voice
+function drawOrbs(ctx, W, H, vol) {
+  const cx = W / 2;
+  const barColor = '#1a1a30';
+  const bgColor  = '#f5f5ec';
+
+  const spanW  = W * 0.60;
+  const barTop = 0;
+  const barBot   = H;
+  const barH     = barBot - barTop;
+  const barStep  = spanW / 4;   // gap between each of the 5 bars
+  const barStart = cx - spanW / 2;
+
+  const v  = Math.min(vol, 1);
+  const ex = Math.max(0, (vol - 1) / 0.3);  // 0→1 through exaggeration zone
+
+  // Eye circles (bars 1 & 3): rise with vol
+  const eyeY = barTop + barH * lerp(lerp(0.38, 0.15, v), 0.06, ex);
+  // Mouth circle (bar 2/center): drops with vol
+  const mouthY = barTop + barH * lerp(lerp(0.56, 0.78, v), 0.88, ex);
+
+  // Bars and rings grow at the same pace as the circles move
+  const barThick = W * lerp(lerp(0.022, 0.048, v), 0.065, ex);
+  const circleR  = W * lerp(lerp(0.072, 0.110, v), 0.130, ex);
+
+  // Bars
+  ctx.fillStyle = barColor;
+  for (let i = 0; i < 5; i++) {
+    const x = barStart + i * barStep;
+    ctx.fillRect(x - barThick / 2, barTop, barThick, barH);
+  }
+
+  // Hollow rings: white fill (punches bar), dark stroke
+  ctx.lineWidth  = barThick;
+  ctx.strokeStyle = barColor;
+  ctx.fillStyle  = bgColor;
+
+  [1, 3].forEach(i => {
+    const x = barStart + i * barStep;
+    ctx.beginPath(); ctx.arc(x, eyeY, circleR, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+  });
+
+  const mx = barStart + 2 * barStep;
+  ctx.beginPath(); ctx.arc(mx, mouthY, circleR, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+}
+
 // ─── Face registry ────────────────────────────────────────────────────────────
 const faces = [
+  { name: 'Orbs',       draw: drawOrbs,       bg: '#f5f5ec' },
+  { name: 'Googly',     draw: drawGoogly,     bg: '#000000' },
+  { name: 'Snowman',    draw: drawSnowman,    bg: '#ffffff' },
   { name: 'Mahomes',    draw: drawMahomes,    bg: '#0a0000' },
   { name: 'Blob',       draw: drawBraviFrog,  bg: '#000000' },
   { name: 'Stripes',    draw: drawStripes,    bg: '#000000' },
@@ -1839,8 +2082,9 @@ function renderThumbnails() {
   faces.forEach((face, i) => {
     const tile = document.createElement('div');
     tile.className = 'face-tile' + (i === currentFace ? ' active-face' : '');
+    tile.style.background = face.bg;
     const c = document.createElement('canvas');
-    const TW = 270, TH = 480;
+    const TW = 480, TH = 480;
     c.width = TW; c.height = TH;
     const tctx = c.getContext('2d');
     tctx.fillStyle = face.bg;
@@ -1861,12 +2105,15 @@ function renderThumbnails() {
 
 function openMenu() {
   renderThumbnails();
-  // refresh active highlight
   faceGrid.querySelectorAll('.face-tile').forEach((t, i) => {
     t.classList.toggle('active-face', i === currentFace);
   });
   menuOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
+  // Size each row so exactly 2 rows (4 faces) are visible at once
+  const headerH = document.getElementById('menu-header').offsetHeight;
+  const rowH = Math.floor((window.innerHeight - headerH) / 2);
+  faceGrid.style.gridAutoRows = rowH + 'px';
 }
 function closeMenu() {
   menuOverlay.classList.remove('open');
@@ -1933,7 +2180,11 @@ retryBtn.addEventListener('click', () => {
     previewCanvas.style.height = window.innerHeight + 'px';
     const pctx = previewCanvas.getContext('2d');
     pctx.scale(devicePixelRatio, devicePixelRatio);
-    try { drawMahomes(pctx, window.innerWidth, window.innerHeight, 0); } catch(e) {}
+    try {
+    pctx.fillStyle = faces[0].bg;
+    pctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+    faces[0].draw(pctx, previewCanvas.width, previewCanvas.height, 0);
+  } catch(e) {}
   }
   drawPreview();
   window.addEventListener('resize', drawPreview);
